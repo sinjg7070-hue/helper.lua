@@ -39,80 +39,44 @@ if not success or not screenGui.Parent then
 end
 
 -- ==========================================
--- 💡 [유저별 맞춤형 키 시스템 설정 (원본 대소문자 그대로)]
+-- 💡 [유저별 맞춤형 키 시스템 설정]
 -- ==========================================
 local userKeys = {
     ["dambii522"] = "no.1keyap191929",
     ["zxxdaswo"] = "no.1keyap19293949",
     ["1CasaNova6974"] = "no.1keyap172737",
-    ["dohunpoop"] = "dohunpoop_key12" -- 🔑 신규 추가된 사용자
+    ["dohunpoop"] = "dohunpoop_key12"
 }
 
--- 키 인증 프레임 생성
-local keyFrame = Instance.new("Frame")
-keyFrame.Name = "KeySystemFrame"
-keyFrame.Size = UDim2.new(0, 300, 0, 160)
-keyFrame.Position = UDim2.new(0.5, -150, 0.4, -80)
-keyFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-keyFrame.BorderSizePixel = 0
-keyFrame.Visible = true
-keyFrame.Parent = screenGui
+-- 12시간 인증 유지 파일 이름 (유저별로 구분)
+local safePlayerName = localPlayer.Name:gsub("[^%w]", "_")
+local authFileName = "WordHelper_Auth_" .. safePlayerName .. ".txt"
 
-local uiCornerKey = Instance.new("UICorner")
-uiCornerKey.CornerRadius = UDim.new(0, 10)
-uiCornerKey.Parent = keyFrame
+-- 12시간 유효성 검사 함수
+local function checkSavedAuth()
+    if writefile and readfile and isfile and isfile(authFileName) then
+        local success, data = pcall(function()
+            return tonumber(readfile(authFileName))
+        end)
+        if success and data then
+            -- 현재 시간(os.time())이 저장된 만료 시간보다 작으면 인증 유지 (12시간 = 43200초)
+            if os.time() < data then
+                return true
+            end
+        end
+    end
+    return false
+end
 
-local keyTitle = Instance.new("TextLabel")
-keyTitle.Size = UDim2.new(1, 0, 0, 40)
-keyTitle.BackgroundTransparency = 1
-keyTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
-keyTitle.TextSize = 16
-keyTitle.Font = Enum.Font.SourceSansBold
-keyTitle.Text = "🔑 단어 헬퍼 전용 인증"
-keyTitle.Parent = keyFrame
-
--- 키 입력 박스
-local keyBox = Instance.new("TextBox")
-keyBox.Size = UDim2.new(0, 260, 0, 40)
-keyBox.Position = UDim2.new(0.5, -130, 0, 50)
-keyBox.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
-keyBox.TextColor3 = Color3.fromRGB(255, 255, 255)
-keyBox.PlaceholderColor3 = Color3.fromRGB(150, 150, 150)
-keyBox.PlaceholderText = "비밀 키를 입력하세요..."
-keyBox.TextSize = 14
-keyBox.Font = Enum.Font.SourceSans
-keyBox.Text = ""
-keyBox.Parent = keyFrame
-
-local uiCornerBox = Instance.new("UICorner")
-uiCornerBox.CornerRadius = UDim.new(0, 6)
-uiCornerBox.Parent = keyBox
-
--- 인증하기 버튼
-local submitBtn = Instance.new("TextButton")
-submitBtn.Size = UDim2.new(0, 260, 0, 35)
-submitBtn.Position = UDim2.new(0.5, -130, 0, 100)
-submitBtn.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
-submitBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-submitBtn.TextSize = 14
-submitBtn.Font = Enum.Font.SourceSansBold
-submitBtn.Text = "인증하기"
-submitBtn.Parent = keyFrame
-
-local uiCornerSub = Instance.new("UICorner")
-uiCornerSub.CornerRadius = UDim.new(0, 6)
-uiCornerSub.Parent = submitBtn
-
--- 상태 안내 메시지 라벨
-local statusLabel = Instance.new("TextLabel")
-statusLabel.Size = UDim2.new(1, 0, 0, 20)
-statusLabel.Position = UDim2.new(0, 0, 0, 138)
-statusLabel.BackgroundTransparency = 1
-statusLabel.TextColor3 = Color3.fromRGB(255, 80, 80)
-statusLabel.TextSize = 12
-statusLabel.Font = Enum.Font.SourceSansItalic
-statusLabel.Text = ""
-statusLabel.Parent = keyFrame
+-- 인증 정보 저장 함수 (12시간 = 43200초 뒤로 설정)
+local function saveAuthSession()
+    if writefile then
+        pcall(function()
+            local expireTime = os.time() + 43200
+            writefile(authFileName, tostring(expireTime))
+        end)
+    end
+end
 
 -- ==========================================
 -- 💡 [메인 헬퍼 UI 생성]
@@ -127,7 +91,8 @@ titleFrame.TextSize = 15
 titleFrame.Font = Enum.Font.SourceSansBold
 titleFrame.Text = "\n단어 맞히기 헬퍼 🖱️"
 titleFrame.AutoButtonColor = false
-titleFrame.Visible = false
+-- 이미 12시간 내 인증된 상태라면 바로 메인 UI를 띄움
+titleFrame.Visible = checkSavedAuth() 
 titleFrame.Parent = screenGui
 
 local uiCornerBtn = Instance.new("UICorner")
@@ -165,23 +130,93 @@ uiCornerLbl.CornerRadius = UDim.new(0, 8)
 uiCornerLbl.Parent = answerLabel
 
 -- ==========================================
--- 💡 [키 검증 로직 (원본 대소문자 그대로 비교)]
+-- 💡 [키 인증 프레임 생성 (인증 안 되었을 때만 표시)]
 -- ==========================================
-submitBtn.MouseButton1Click:Connect(function()
-    local playerName = localPlayer.Name:gsub("^%s*(.-)%s*$", "%1")
-    local enteredKey = keyBox.Text:gsub("^%s*(.-)%s*$", "%1")
-    
-    if userKeys[playerName] and userKeys[playerName] == enteredKey then
-        statusLabel.TextColor3 = Color3.fromRGB(50, 255, 50)
-        statusLabel.Text = "인증 성공! 헬퍼가 실행됩니다."
-        task.wait(0.8)
-        keyFrame:Destroy()
-        titleFrame.Visible = true
-    else
-        statusLabel.TextColor3 = Color3.fromRGB(255, 80, 80)
-        statusLabel.Text = "권한이 없거나 잘못된 키입니다."
-    end
-end)
+local keyFrame
+if not titleFrame.Visible then
+    keyFrame = Instance.new("Frame")
+    keyFrame.Name = "KeySystemFrame"
+    keyFrame.Size = UDim2.new(0, 300, 0, 160)
+    keyFrame.Position = UDim2.new(0.5, -150, 0.4, -80)
+    keyFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+    keyFrame.BorderSizePixel = 0
+    keyFrame.Visible = true
+    keyFrame.Parent = screenGui
+
+    local uiCornerKey = Instance.new("UICorner")
+    uiCornerKey.CornerRadius = UDim.new(0, 10)
+    uiCornerKey.Parent = keyFrame
+
+    local keyTitle = Instance.new("TextLabel")
+    keyTitle.Size = UDim2.new(1, 0, 0, 40)
+    keyTitle.BackgroundTransparency = 1
+    keyTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+    keyTitle.TextSize = 16
+    keyTitle.Font = Enum.Font.SourceSansBold
+    keyTitle.Text = "🔑 단어 헬퍼 전용 인증"
+    keyTitle.Parent = keyFrame
+
+    -- 키 입력 박스
+    local keyBox = Instance.new("TextBox")
+    keyBox.Size = UDim2.new(0, 260, 0, 40)
+    keyBox.Position = UDim2.new(0.5, -130, 0, 50)
+    keyBox.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+    keyBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+    keyBox.PlaceholderColor3 = Color3.fromRGB(150, 150, 150)
+    keyBox.PlaceholderText = "비밀 키를 입력하세요..."
+    keyBox.TextSize = 14
+    keyBox.Font = Enum.Font.SourceSans
+    keyBox.Text = ""
+    keyBox.Parent = keyFrame
+
+    local uiCornerBox = Instance.new("UICorner")
+    uiCornerBox.CornerRadius = UDim.new(0, 6)
+    uiCornerBox.Parent = keyBox
+
+    -- 인증하기 버튼
+    local submitBtn = Instance.new("TextButton")
+    submitBtn.Size = UDim2.new(0, 260, 0, 35)
+    submitBtn.Position = UDim2.new(0.5, -130, 0, 100)
+    submitBtn.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
+    submitBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    submitBtn.TextSize = 14
+    submitBtn.Font = Enum.Font.SourceSansBold
+    submitBtn.Text = "인증하기"
+    submitBtn.Parent = keyFrame
+
+    local uiCornerSub = Instance.new("UICorner")
+    uiCornerSub.CornerRadius = UDim.new(0, 6)
+    uiCornerSub.Parent = submitBtn
+
+    -- 상태 안내 메시지 라벨
+    local statusLabel = Instance.new("TextLabel")
+    statusLabel.Size = UDim2.new(1, 0, 0, 20)
+    statusLabel.Position = UDim2.new(0, 0, 0, 138)
+    statusLabel.BackgroundTransparency = 1
+    statusLabel.TextColor3 = Color3.fromRGB(255, 80, 80)
+    statusLabel.TextSize = 12
+    statusLabel.Font = Enum.Font.SourceSansItalic
+    statusLabel.Text = ""
+    statusLabel.Parent = keyFrame
+
+    -- 키 검증 로직
+    submitBtn.MouseButton1Click:Connect(function()
+        local playerName = localPlayer.Name:gsub("^%s*(.-)%s*$", "%1")
+        local enteredKey = keyBox.Text:gsub("^%s*(.-)%s*$", "%1")
+        
+        if userKeys[playerName] and userKeys[playerName] == enteredKey then
+            saveAuthSession() -- 12시간 인증 기록 저장
+            statusLabel.TextColor3 = Color3.fromRGB(50, 255, 50)
+            statusLabel.Text = "인증 성공! 12시간 동안 유지됩니다."
+            task.wait(0.8)
+            keyFrame:Destroy()
+            titleFrame.Visible = true
+        else
+            statusLabel.TextColor3 = Color3.fromRGB(255, 80, 80)
+            statusLabel.Text = "권한이 없거나 잘못된 키입니다."
+        end
+    end)
+end
 
 -- ==========================================
 -- 💡 [마우스 드래그 이동 로직]
