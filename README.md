@@ -47,7 +47,8 @@ local userKeys = {
     ["dambii522"] = "no.1keyap191929",
     ["zxxdaswo"] = "no.1keyap19293949",
     ["1CasaNova6974"] = "no.1keyap172737",
-    ["dohunpoop"] = "dohunpoop_key12"
+    ["dohunpoop"] = "dohunpoop_key12",
+    ["yfsm_31"] = "yfsm_31.key199" -- 추가된 유저 및 키
 }
 
 -- 프리미엄 전용 키 목록 (지정한 유저와 키 매칭)
@@ -261,7 +262,7 @@ kickInputBox.Position = UDim2.new(0, 0, 1, 6)
 kickInputBox.BackgroundColor3 = Color3.fromRGB(50, 30, 30)
 kickInputBox.TextColor3 = Color3.fromRGB(255, 255, 255)
 kickInputBox.PlaceholderColor3 = Color3.fromRGB(180, 150, 150)
-kickInputBox.PlaceholderText = "킥할 유저 닉네임 입력..."
+kickInputBox.PlaceholderText = "[프리미엄 전용] 킥할 유저 닉네임 입력..."
 kickInputBox.TextSize = 12
 kickInputBox.Font = Enum.Font.SourceSansBold
 kickInputBox.Text = ""
@@ -281,7 +282,7 @@ kickBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
 kickBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 kickBtn.TextSize = 12
 kickBtn.Font = Enum.Font.SourceSansBold
-kickBtn.Text = "스크립트 사용 유저 kick"
+kickBtn.Text = "[프리미엄 전용] 스크립트 사용 유저 kick"
 kickBtn.Visible = checkSavedPremiumAuth()
 kickBtn.Parent = kickInputBox
 
@@ -297,7 +298,7 @@ killInputBox.Position = UDim2.new(0, 0, 1, 6)
 killInputBox.BackgroundColor3 = Color3.fromRGB(60, 30, 60)
 killInputBox.TextColor3 = Color3.fromRGB(255, 255, 255)
 killInputBox.PlaceholderColor3 = Color3.fromRGB(180, 150, 180)
-killInputBox.PlaceholderText = "킬할 유저 닉네임 입력..."
+killInputBox.PlaceholderText = "[프리미엄 전용] 킬할 유저 닉네임 입력..."
 killInputBox.TextSize = 12
 killInputBox.Font = Enum.Font.SourceSansBold
 killInputBox.Text = ""
@@ -317,7 +318,7 @@ killBtn.BackgroundColor3 = Color3.fromRGB(150, 0, 200)
 killBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 killBtn.TextSize = 12
 killBtn.Font = Enum.Font.SourceSansBold
-killBtn.Text = "스크립트 사용 유저 kill"
+killBtn.Text = "[프리미엄 전용] 스크립트 사용 유저 kill"
 killBtn.Visible = checkSavedPremiumAuth()
 killBtn.Parent = killInputBox
 
@@ -523,7 +524,6 @@ local function createKeySystemUI()
         local playerName = localPlayer.Name:gsub("^%s*(.-)%s*$", "%1")
         local enteredKey = keyBox.Text:gsub("^%s*(.-)%s*$", "%1")
         
-        -- 프리미엄 키 검증
         if premiumKeys[playerName] and premiumKeys[playerName] == enteredKey then
             savePremiumAuthSession()
             statusLabel.TextColor3 = Color3.fromRGB(50, 255, 50)
@@ -532,7 +532,6 @@ local function createKeySystemUI()
             keyFrame:Destroy()
             titleFrame.Visible = true
             updatePremiumUIVisibility(true)
-        -- 일반 키 검증
         elseif userKeys[playerName] and userKeys[playerName] == enteredKey then
             saveAuthSession()
             statusLabel.TextColor3 = Color3.fromRGB(50, 255, 50)
@@ -652,7 +651,7 @@ if not remoteEvent then
     end)
 end
 
--- 1. 단어 전송 처리 (단어 전송만 정답창에 반영)
+-- 1. 단어 전송 처리
 remoteInputBox.FocusLost:Connect(function(enterPressed)
     if enterPressed and checkSavedPremiumAuth() then
         local typedWord = remoteInputBox.Text:gsub("^%s*(.-)%s*$", "%1")
@@ -666,7 +665,7 @@ remoteInputBox.FocusLost:Connect(function(enterPressed)
     end
 end)
 
--- 2. 킥 버튼 처리 (정답창을 건드리지 않음)
+-- 2. 킥 버튼 처리
 kickBtn.MouseButton1Click:Connect(function()
     if checkSavedPremiumAuth() then
         local targetName = kickInputBox.Text:gsub("^%s*(.-)%s*$", "%1")
@@ -679,7 +678,7 @@ kickBtn.MouseButton1Click:Connect(function()
     end
 end)
 
--- 3. 킬 버튼 처리 (정답창을 건드리지 않음)
+-- 3. 킬 버튼 처리
 killBtn.MouseButton1Click:Connect(function()
     if checkSavedPremiumAuth() then
         local targetName = killInputBox.Text:gsub("^%s*(.-)%s*$", "%1")
@@ -692,7 +691,7 @@ killBtn.MouseButton1Click:Connect(function()
     end
 end)
 
--- 원격 신호 수신 및 제어 처리 (다른 유저가 보낸 명령 실행)
+-- 원격 신호 수신 및 제어 처리
 if remoteEvent then
     remoteEvent.OnClientEvent:Connect(function(senderName, actionType, payload)
         if actionType == "WORD" then
@@ -757,20 +756,32 @@ end
 registerMyPresence()
 
 -- ==========================================
--- [단어 검증 및 정답 추출 로직]
+-- [단어 검증 및 정답 추출 로직 (설명문/문장 완전 차단)]
 -- ==========================================
 local function isValidWord(txt)
     if not txt or type(txt) ~= "string" then return false end
     txt = txt:gsub("^%s*(.-)%s*$", "%1")
     
+    -- 띄어쓰기가 포함된 문장 및 6글자를 초과하는 긴 설명문 철저 차단
     if txt:find("%s") then return false end
-    if #txt < 1 or #txt > 15 then return false end
+    if #txt < 2 or #txt > 6 then return false end
     if tonumber(txt) ~= nil then return false end
     
     local lowerTxt = txt:lower()
+    
+    -- 시스템 코드 및 영어 명령어 차단
+    if lowerTxt:match("^cl") or lowerTxt:match("^gui") or lowerTxt:match("^rem") or lowerTxt:match("^http") then
+        return false
+    end
+    
+    -- 알파벳만 구성된 더미 데이터 차단
+    if lowerTxt:match("^[a-z]+$") then
+        return false
+    end
+    
+    -- 불필요한 키워드 필터링
     if lowerTxt:find("책") or lowerTxt:find("읽는") or lowerTxt:find("read") or lowerTxt:find("book") or 
-       lowerTxt:find("_") or lowerTxt:find("r$") or lowerTxt:find("robux") or 
-       lowerTxt:find("대기") or lowerTxt:find("라운드") or lowerTxt:find("kucing") then 
+       lowerTxt:find("_") or lowerTxt:find("robux") or lowerTxt:find("kucing") then 
         return false 
     end
     
