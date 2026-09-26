@@ -17,7 +17,7 @@ pcall(function()
     end
 end)
 
--- ScreenGui 생성 (CoreGui 우선 배치, 실패 시 PlayerGui)
+-- ScreenGui 생성
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "WordGameHelperUI"
 screenGui.ResetOnSpawn = false
@@ -39,12 +39,12 @@ if not success or not screenGui.Parent then
 end
 
 -- ==========================================
--- 💡 [유저별 맞춤형 키 시스템 설정 (소문자 자동 대조)]
+-- 💡 [유저별 맞춤형 키 시스템 설정 (원본 대소문자 그대로)]
 -- ==========================================
 local userKeys = {
     ["dambii522"] = "no.1keyap191929",
     ["zxxdaswo"] = "no.1keyap19293949",
-    ["1csanova6974"] = "no.1keyap172737" -- 소문자로 통일하여 오차 방지
+    ["1CasaNova6974"] = "no.1keyap172737" -- 🔑 정확한 대소문자 반영 완료
 }
 
 -- 키 인증 프레임 생성
@@ -54,7 +54,7 @@ keyFrame.Size = UDim2.new(0, 300, 0, 160)
 keyFrame.Position = UDim2.new(0.5, -150, 0.4, -80)
 keyFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 keyFrame.BorderSizePixel = 0
-keyFrame.Visible = true -- 확실하게 보이도록 명시
+keyFrame.Visible = true
 keyFrame.Parent = screenGui
 
 local uiCornerKey = Instance.new("UICorner")
@@ -114,7 +114,7 @@ statusLabel.Text = ""
 statusLabel.Parent = keyFrame
 
 -- ==========================================
--- 💡 [메인 헬퍼 UI 생성 (인증 성공 시 표시됨)]
+-- 💡 [메인 헬퍼 UI 생성]
 -- ==========================================
 local titleFrame = Instance.new("TextButton")
 titleFrame.Name = "TitleFrame"
@@ -126,7 +126,7 @@ titleFrame.TextSize = 15
 titleFrame.Font = Enum.Font.SourceSansBold
 titleFrame.Text = "\n단어 맞히기 헬퍼 🖱️"
 titleFrame.AutoButtonColor = false
-titleFrame.Visible = false -- 처음에만 숨김
+titleFrame.Visible = false
 titleFrame.Parent = screenGui
 
 local uiCornerBtn = Instance.new("UICorner")
@@ -164,10 +164,10 @@ uiCornerLbl.CornerRadius = UDim.new(0, 8)
 uiCornerLbl.Parent = answerLabel
 
 -- ==========================================
--- 💡 [키 검증 로직]
+-- 💡 [키 검증 로직 (원본 대소문자 그대로 비교)]
 -- ==========================================
 submitBtn.MouseButton1Click:Connect(function()
-    local playerName = string.lower(localPlayer.Name)
+    local playerName = localPlayer.Name:gsub("^%s*(.-)%s*$", "%1")
     local enteredKey = keyBox.Text:gsub("^%s*(.-)%s*$", "%1")
     
     if userKeys[playerName] and userKeys[playerName] == enteredKey then
@@ -261,5 +261,3 @@ task.spawn(function()
         end)
     end
 end)
-
-print("단어 헬퍼 UI 강제 생성 완료!")
