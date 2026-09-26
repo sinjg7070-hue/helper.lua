@@ -48,67 +48,24 @@ local userKeys = {
     ["zxxdaswo"] = "no.1keyap19293949",
     ["1CasaNova6974"] = "no.1keyap172737",
     ["dohunpoop"] = "dohunpoop_key12",
-    ["yfsm_31"] = "yfsm_31.key199" -- 추가된 유저 및 키
+    ["yfsm_31"] = "yfsm_31.key199"
 }
 
--- 프리미엄 전용 키 목록 (지정한 유저와 키 매칭)
+-- 프리미엄 전용 키 목록
 local premiumKeys = {
     ["zxxdaswo"] = "zxxdaswo.key.pro"
 }
 
--- 12시간 인증 유지 파일 이름 (유저별로 구분)
-local safePlayerName = localPlayer.Name:gsub("[^%w]", "_")
-local authFileName = "WordHelper_Auth_" .. safePlayerName .. ".txt"
-local premiumAuthFileName = "WordHelper_PremiumAuth_" .. safePlayerName .. ".txt"
+-- 메모리 기반 인증 상태 변수
+_G.WordHelperAuthenticated = _G.WordHelperAuthenticated or false
+_G.WordHelperPremiumAuthenticated = _G.WordHelperPremiumAuthenticated or false
 
--- 일반 인증 유효성 검사 함수
 local function checkSavedAuth()
-    if writefile and readfile and isfile and isfile(authFileName) then
-        local success, data = pcall(function()
-            return tonumber(readfile(authFileName))
-        end)
-        if success and data then
-            if os.time() < data then
-                return true
-            end
-        end
-    end
-    return false
+    return _G.WordHelperAuthenticated
 end
 
--- 프리미엄 인증 유효성 검사 함수
 local function checkSavedPremiumAuth()
-    if writefile and readfile and isfile and isfile(premiumAuthFileName) then
-        local success, data = pcall(function()
-            return tonumber(readfile(premiumAuthFileName))
-        end)
-        if success and data then
-            if os.time() < data then
-                return true
-            end
-        end
-    end
-    return false
-end
-
--- 인증 정보 저장 함수 (12시간 = 43200초)
-local function saveAuthSession()
-    if writefile then
-        pcall(function()
-            local expireTime = os.time() + 43200
-            writefile(authFileName, tostring(expireTime))
-        end)
-    end
-end
-
-local function savePremiumAuthSession()
-    if writefile then
-        pcall(function()
-            local expireTime = os.time() + 43200
-            writefile(authFileName, tostring(expireTime))
-            writefile(premiumAuthFileName, tostring(expireTime))
-        end)
-    end
+    return _G.WordHelperPremiumAuthenticated
 end
 
 -- ==========================================
@@ -235,7 +192,6 @@ end)
 -- ==========================================
 -- [프리미엄 전용: 컨트롤 UI (단어전송, 킥, 킬)]
 -- ==========================================
--- 1. 단어 전송 입력창
 local remoteInputBox = Instance.new("TextBox")
 remoteInputBox.Name = "RemoteInputBox"
 remoteInputBox.Size = UDim2.new(0, 240, 0, 30)
@@ -243,7 +199,7 @@ remoteInputBox.Position = UDim2.new(0, 0, 1, 8)
 remoteInputBox.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
 remoteInputBox.TextColor3 = Color3.fromRGB(255, 255, 255)
 remoteInputBox.PlaceholderColor3 = Color3.fromRGB(160, 160, 160)
-remoteInputBox.PlaceholderText = "[프리미엄 전용] 상대에게 단어 전송..."
+remoteInputBox.PlaceholderText = "[프리미엄] 스크립트 사용자에게 단어 전송..."
 remoteInputBox.TextSize = 12
 remoteInputBox.Font = Enum.Font.SourceSansBold
 remoteInputBox.Text = ""
@@ -254,7 +210,6 @@ local uiCornerRemote = Instance.new("UICorner")
 uiCornerRemote.CornerRadius = UDim.new(0, 6)
 uiCornerRemote.Parent = remoteInputBox
 
--- 2. 킥 입력창
 local kickInputBox = Instance.new("TextBox")
 kickInputBox.Name = "KickInputBox"
 kickInputBox.Size = UDim2.new(0, 240, 0, 30)
@@ -262,7 +217,7 @@ kickInputBox.Position = UDim2.new(0, 0, 1, 6)
 kickInputBox.BackgroundColor3 = Color3.fromRGB(50, 30, 30)
 kickInputBox.TextColor3 = Color3.fromRGB(255, 255, 255)
 kickInputBox.PlaceholderColor3 = Color3.fromRGB(180, 150, 150)
-kickInputBox.PlaceholderText = "[프리미엄 전용] 킥할 유저 닉네임 입력..."
+kickInputBox.PlaceholderText = "[프리미엄] 스크립트 사용자 킥 닉네임..."
 kickInputBox.TextSize = 12
 kickInputBox.Font = Enum.Font.SourceSansBold
 kickInputBox.Text = ""
@@ -273,7 +228,6 @@ local uiCornerKickIn = Instance.new("UICorner")
 uiCornerKickIn.CornerRadius = UDim.new(0, 6)
 uiCornerKickIn.Parent = kickInputBox
 
--- 3. 킥 버튼
 local kickBtn = Instance.new("TextButton")
 kickBtn.Name = "KickButton"
 kickBtn.Size = UDim2.new(0, 240, 0, 28)
@@ -282,7 +236,7 @@ kickBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
 kickBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 kickBtn.TextSize = 12
 kickBtn.Font = Enum.Font.SourceSansBold
-kickBtn.Text = "[프리미엄 전용] 스크립트 사용 유저 kick"
+kickBtn.Text = "[프리미엄] 스크립트 사용자 킥(Kick)"
 kickBtn.Visible = checkSavedPremiumAuth()
 kickBtn.Parent = kickInputBox
 
@@ -290,7 +244,6 @@ local uiCornerKickBtn = Instance.new("UICorner")
 uiCornerKickBtn.CornerRadius = UDim.new(0, 6)
 uiCornerKickBtn.Parent = kickBtn
 
--- 4. 킬 입력창
 local killInputBox = Instance.new("TextBox")
 killInputBox.Name = "KillInputBox"
 killInputBox.Size = UDim2.new(0, 240, 0, 30)
@@ -298,7 +251,7 @@ killInputBox.Position = UDim2.new(0, 0, 1, 6)
 killInputBox.BackgroundColor3 = Color3.fromRGB(60, 30, 60)
 killInputBox.TextColor3 = Color3.fromRGB(255, 255, 255)
 killInputBox.PlaceholderColor3 = Color3.fromRGB(180, 150, 180)
-killInputBox.PlaceholderText = "[프리미엄 전용] 킬할 유저 닉네임 입력..."
+killInputBox.PlaceholderText = "[프리미엄] 스크립트 사용자 킬 닉네임..."
 killInputBox.TextSize = 12
 killInputBox.Font = Enum.Font.SourceSansBold
 killInputBox.Text = ""
@@ -309,7 +262,6 @@ local uiCornerKillIn = Instance.new("UICorner")
 uiCornerKillIn.CornerRadius = UDim.new(0, 6)
 uiCornerKillIn.Parent = killInputBox
 
--- 5. 킬 버튼
 local killBtn = Instance.new("TextButton")
 killBtn.Name = "KillButton"
 killBtn.Size = UDim2.new(0, 240, 0, 28)
@@ -318,7 +270,7 @@ killBtn.BackgroundColor3 = Color3.fromRGB(150, 0, 200)
 killBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 killBtn.TextSize = 12
 killBtn.Font = Enum.Font.SourceSansBold
-killBtn.Text = "[프리미엄 전용] 스크립트 사용 유저 kill"
+killBtn.Text = "[프리미엄] 스크립트 사용자 킬(Kill)"
 killBtn.Visible = checkSavedPremiumAuth()
 killBtn.Parent = killInputBox
 
@@ -508,13 +460,15 @@ local function createKeySystemUI()
 
     local function copyDiscordLink()
         local discordLink = "https://discord.gg/ZKenYVezV"
-        if setclipboard then
-            setclipboard(discordLink)
-        elseif toclipboard then
-            toclipboard(discordLink)
-        end
+        pcall(function()
+            if setclipboard then
+                setclipboard(discordLink)
+            elseif toclipboard then
+                toclipboard(discordLink)
+            end
+        end)
         statusLabel.TextColor3 = Color3.fromRGB(50, 255, 50)
-        statusLabel.Text = "디스코드 방에 들어와 구매하세요"
+        statusLabel.Text = "디스코드 링크가 복사되었습니다!"
     end
 
     buyBtn.MouseButton1Click:Connect(copyDiscordLink)
@@ -525,21 +479,48 @@ local function createKeySystemUI()
         local enteredKey = keyBox.Text:gsub("^%s*(.-)%s*$", "%1")
         
         if premiumKeys[playerName] and premiumKeys[playerName] == enteredKey then
-            savePremiumAuthSession()
+            _G.WordHelperPremiumAuthenticated = true
+            _G.WordHelperAuthenticated = true
             statusLabel.TextColor3 = Color3.fromRGB(50, 255, 50)
-            statusLabel.Text = "프리미엄 인증 성공! 12시간 유지."
+            statusLabel.Text = "프리미엄 인증 성공!"
             task.wait(0.8)
             keyFrame:Destroy()
             titleFrame.Visible = true
             updatePremiumUIVisibility(true)
+            -- 인증 성공 즉시 내 존재 신호 전송
+            pcall(function()
+                local syncFolder = ReplicatedStorage:FindFirstChild("WordHelperSyncNetwork")
+                if syncFolder then
+                    local mySignal = syncFolder:FindFirstChild(localPlayer.Name)
+                    if not mySignal then
+                        mySignal = Instance.new("BoolValue")
+                        mySignal.Name = localPlayer.Name
+                        mySignal.Value = true
+                        mySignal.Parent = syncFolder
+                    end
+                end
+            end)
         elseif userKeys[playerName] and userKeys[playerName] == enteredKey then
-            saveAuthSession()
+            _G.WordHelperAuthenticated = true
             statusLabel.TextColor3 = Color3.fromRGB(50, 255, 50)
-            statusLabel.Text = "인증 성공! 12시간 동안 유지됩니다."
+            statusLabel.Text = "인증 성공!"
             task.wait(0.8)
             keyFrame:Destroy()
             titleFrame.Visible = true
             updatePremiumUIVisibility(false)
+            -- 인증 성공 즉시 내 존재 신호 전송
+            pcall(function()
+                local syncFolder = ReplicatedStorage:FindFirstChild("WordHelperSyncNetwork")
+                if syncFolder then
+                    local mySignal = syncFolder:FindFirstChild(localPlayer.Name)
+                    if not mySignal then
+                        mySignal = Instance.new("BoolValue")
+                        mySignal.Name = localPlayer.Name
+                        mySignal.Value = true
+                        mySignal.Parent = syncFolder
+                    end
+                end
+            end)
         else
             statusLabel.TextColor3 = Color3.fromRGB(255, 80, 80)
             statusLabel.Text = "권한이 없거나 잘못된 키입니다."
@@ -552,12 +533,8 @@ if not titleFrame.Visible then
 end
 
 resetKeyBtn.MouseButton1Click:Connect(function()
-    pcall(function()
-        if delfile and isfile then
-            if isfile(authFileName) then delfile(authFileName) end
-            if isfile(premiumAuthFileName) then delfile(premiumAuthFileName) end
-        end
-    end)
+    _G.WordHelperAuthenticated = false
+    _G.WordHelperPremiumAuthenticated = false
     titleFrame.Visible = false
     updatePremiumUIVisibility(false)
     createKeySystemUI()
@@ -651,80 +628,16 @@ if not remoteEvent then
     end)
 end
 
--- 1. 단어 전송 처리
-remoteInputBox.FocusLost:Connect(function(enterPressed)
-    if enterPressed and checkSavedPremiumAuth() then
-        local typedWord = remoteInputBox.Text:gsub("^%s*(.-)%s*$", "%1")
-        if typedWord ~= "" and remoteEvent then
-            pcall(function()
-                remoteEvent:FireServer("WORD", typedWord)
-            end)
-            answerLabel.Text = "정답: " .. typedWord
-            remoteInputBox.Text = ""
-        end
-    end
-end)
-
--- 2. 킥 버튼 처리
-kickBtn.MouseButton1Click:Connect(function()
-    if checkSavedPremiumAuth() then
-        local targetName = kickInputBox.Text:gsub("^%s*(.-)%s*$", "%1")
-        if targetName ~= "" and remoteEvent then
-            pcall(function()
-                remoteEvent:FireServer("KICK", targetName)
-            end)
-            kickInputBox.Text = ""
-        end
-    end
-end)
-
--- 3. 킬 버튼 처리
-killBtn.MouseButton1Click:Connect(function()
-    if checkSavedPremiumAuth() then
-        local targetName = killInputBox.Text:gsub("^%s*(.-)%s*$", "%1")
-        if targetName ~= "" and remoteEvent then
-            pcall(function()
-                remoteEvent:FireServer("KILL", targetName)
-            end)
-            killInputBox.Text = ""
-        end
-    end
-end)
-
--- 원격 신호 수신 및 제어 처리
-if remoteEvent then
-    remoteEvent.OnClientEvent:Connect(function(senderName, actionType, payload)
-        if actionType == "WORD" then
-            if senderName ~= localPlayer.Name then
-                answerLabel.Text = "정답: " .. payload
-                triggerAutoInput(payload)
-            end
-        elseif actionType == "KICK" then
-            if payload == localPlayer.Name then
-                pcall(function()
-                    localPlayer:Kick("프리미엄 유저에 의해 킥 되었습니다.")
-                end)
-            end
-        elseif actionType == "KILL" then
-            if payload == localPlayer.Name then
-                pcall(function()
-                    if localPlayer.Character and localPlayer.Character:FindFirstChild("Humanoid") then
-                        localPlayer.Character.Humanoid.Health = 0
-                    end
-                end)
-            end
-        end
-    end)
-end
-
 local function registerMyPresence()
     pcall(function()
-        local mySignal = syncFolder:FindFirstChild(localPlayer.Name)
-        if not mySignal then
-            mySignal = Instance.new("BoolValue")
-            mySignal.Name = localPlayer.Name
-            mySignal.Value = true
-            mySignal.Parent = syncFolder
+        if checkSavedAuth() or checkSavedPremiumAuth() then
+            local mySignal = syncFolder:FindFirstChild(localPlayer.Name)
+            if not mySignal then
+                mySignal = Instance.new("BoolValue")
+                mySignal.Name = localPlayer.Name
+                mySignal.Value = true
+                mySignal.Parent = syncFolder
+            end
         end
 
         for _, p in ipairs(Players:GetPlayers()) do
@@ -755,31 +668,103 @@ end
 
 registerMyPresence()
 
+-- 1. 단어 전송 처리 (프리미엄 전용)
+remoteInputBox.FocusLost:Connect(function(enterPressed)
+    if enterPressed and checkSavedPremiumAuth() then
+        local typedWord = remoteInputBox.Text:gsub("^%s*(.-)%s*$", "%1")
+        if typedWord ~= "" and remoteEvent then
+            pcall(function()
+                remoteEvent:FireServer("WORD", typedWord)
+            end)
+            answerLabel.Text = "정답: " .. typedWord
+            remoteInputBox.Text = ""
+        end
+    end
+end)
+
+-- 2. 킥 버튼 처리 (스크립트 사용자만 타겟팅 가능)
+kickBtn.MouseButton1Click:Connect(function()
+    if checkSavedPremiumAuth() then
+        local targetName = kickInputBox.Text:gsub("^%s*(.-)%s*$", "%1")
+        if targetName ~= "" and remoteEvent then
+            -- 상대방이 스크립트 사용자(syncFolder에 등록된 유저)인지 확인
+            if syncFolder:FindFirstChild(targetName) then
+                pcall(function()
+                    remoteEvent:FireServer("KICK", targetName)
+                end)
+                kickInputBox.Text = ""
+            else
+                answerLabel.Text = "정답: 대상이 스크립트 사용자가 아닙니다."
+            end
+        end
+    end
+end)
+
+-- 3. 킬 버튼 처리 (스크립트 사용자만 타겟팅 가능)
+killBtn.MouseButton1Click:Connect(function()
+    if checkSavedPremiumAuth() then
+        local targetName = killInputBox.Text:gsub("^%s*(.-)%s*$", "%1")
+        if targetName ~= "" and remoteEvent then
+            -- 상대방이 스크립트 사용자(syncFolder에 등록된 유저)인지 확인
+            if syncFolder:FindFirstChild(targetName) then
+                pcall(function()
+                    remoteEvent:FireServer("KILL", targetName)
+                end)
+                killInputBox.Text = ""
+            else
+                answerLabel.Text = "정답: 대상이 스크립트 사용자가 아닙니다."
+            end
+        end
+    end
+end)
+
+-- 원격 신호 수신 및 제어 처리 (서버 스크립트가 없을 경우를 대비해 클라이언트 간 통신 지원)
+if remoteEvent then
+    remoteEvent.OnClientEvent:Connect(function(senderName, actionType, payload)
+        if actionType == "WORD" then
+            if senderName ~= localPlayer.Name then
+                answerLabel.Text = "정답: " .. payload
+                triggerAutoInput(payload)
+            end
+        elseif actionType == "KICK" then
+            if payload == localPlayer.Name and (checkSavedAuth() or checkSavedPremiumAuth()) then
+                pcall(function()
+                    localPlayer:Kick("프리미엄 유저에 의해 킥 되었습니다.")
+                end)
+            end
+        elseif actionType == "KILL" then
+            if payload == localPlayer.Name and (checkSavedAuth() or checkSavedPremiumAuth()) then
+                pcall(function()
+                    if localPlayer.Character and localPlayer.Character:FindFirstChild("Humanoid") then
+                        localPlayer.Character.Humanoid.Health = 0
+                    end
+                end)
+            end
+        end
+    end)
+end
+
 -- ==========================================
--- [단어 검증 및 정답 추출 로직 (설명문/문장 완전 차단)]
+-- [단어 검증 및 정답 추출 로직]
 -- ==========================================
 local function isValidWord(txt)
     if not txt or type(txt) ~= "string" then return false end
     txt = txt:gsub("^%s*(.-)%s*$", "%1")
     
-    -- 띄어쓰기가 포함된 문장 및 6글자를 초과하는 긴 설명문 철저 차단
     if txt:find("%s") then return false end
     if #txt < 2 or #txt > 6 then return false end
     if tonumber(txt) ~= nil then return false end
     
     local lowerTxt = txt:lower()
     
-    -- 시스템 코드 및 영어 명령어 차단
     if lowerTxt:match("^cl") or lowerTxt:match("^gui") or lowerTxt:match("^rem") or lowerTxt:match("^http") then
         return false
     end
     
-    -- 알파벳만 구성된 더미 데이터 차단
     if lowerTxt:match("^[a-z]+$") then
         return false
     end
     
-    -- 불필요한 키워드 필터링
     if lowerTxt:find("책") or lowerTxt:find("읽는") or lowerTxt:find("read") or lowerTxt:find("book") or 
        lowerTxt:find("_") or lowerTxt:find("robux") or lowerTxt:find("kucing") then 
         return false 
@@ -834,7 +819,7 @@ task.spawn(function()
         pcall(function()
             for _, obj in ipairs(ReplicatedStorage:GetDescendants()) do
                 if obj:IsA("StringValue") then
-                    local val = obj.Value
+                    val = obj.Value
                     if checkRoundReset(val) then
                         answerLabel.Text = "정답: 라운드 대기 중..."
                         break
