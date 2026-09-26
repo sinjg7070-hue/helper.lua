@@ -171,7 +171,7 @@ autoBtn.MouseButton1Click:Connect(function()
     end
 end)
 
--- 정답창 (TextLabel) - 초기 텍스트를 '정답: 라운드 대기 중...'으로 수정
+-- 정답창 (TextLabel)
 local answerLabel = Instance.new("TextLabel")
 answerLabel.Name = "AnswerLabel"
 answerLabel.Size = UDim2.new(0, 240, 0, 45)
@@ -232,11 +232,12 @@ destroyScriptBtn.MouseButton1Click:Connect(function()
 end)
 
 -- ==========================================
--- [프리미엄 전용: 상대방 제어용 원격 입력창 생성]
+-- [프리미엄 전용: 컨트롤 UI (단어전송, 킥, 킬)]
 -- ==========================================
+-- 1. 단어 전송 입력창
 local remoteInputBox = Instance.new("TextBox")
 remoteInputBox.Name = "RemoteInputBox"
-remoteInputBox.Size = UDim2.new(0, 240, 0, 32)
+remoteInputBox.Size = UDim2.new(0, 240, 0, 30)
 remoteInputBox.Position = UDim2.new(0, 0, 1, 8)
 remoteInputBox.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
 remoteInputBox.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -245,13 +246,84 @@ remoteInputBox.PlaceholderText = "[프리미엄 전용] 상대에게 단어 전�
 remoteInputBox.TextSize = 12
 remoteInputBox.Font = Enum.Font.SourceSansBold
 remoteInputBox.Text = ""
--- 프리미엄 인증을 완료한 유저에게만 노출
 remoteInputBox.Visible = checkSavedPremiumAuth()
 remoteInputBox.Parent = destroyScriptBtn
 
 local uiCornerRemote = Instance.new("UICorner")
 uiCornerRemote.CornerRadius = UDim.new(0, 6)
 uiCornerRemote.Parent = remoteInputBox
+
+-- 2. 킥 입력창
+local kickInputBox = Instance.new("TextBox")
+kickInputBox.Name = "KickInputBox"
+kickInputBox.Size = UDim2.new(0, 240, 0, 30)
+kickInputBox.Position = UDim2.new(0, 0, 1, 6)
+kickInputBox.BackgroundColor3 = Color3.fromRGB(50, 30, 30)
+kickInputBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+kickInputBox.PlaceholderColor3 = Color3.fromRGB(180, 150, 150)
+kickInputBox.PlaceholderText = "킥할 유저 닉네임 입력..."
+kickInputBox.TextSize = 12
+kickInputBox.Font = Enum.Font.SourceSansBold
+kickInputBox.Text = ""
+kickInputBox.Visible = checkSavedPremiumAuth()
+kickInputBox.Parent = remoteInputBox
+
+local uiCornerKickIn = Instance.new("UICorner")
+uiCornerKickIn.CornerRadius = UDim.new(0, 6)
+uiCornerKickIn.Parent = kickInputBox
+
+-- 3. 킥 버튼
+local kickBtn = Instance.new("TextButton")
+kickBtn.Name = "KickButton"
+kickBtn.Size = UDim2.new(0, 240, 0, 28)
+kickBtn.Position = UDim2.new(0, 0, 1, 6)
+kickBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+kickBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+kickBtn.TextSize = 12
+kickBtn.Font = Enum.Font.SourceSansBold
+kickBtn.Text = "스크립트 사용 유저 kick"
+kickBtn.Visible = checkSavedPremiumAuth()
+kickBtn.Parent = kickInputBox
+
+local uiCornerKickBtn = Instance.new("UICorner")
+uiCornerKickBtn.CornerRadius = UDim.new(0, 6)
+uiCornerKickBtn.Parent = kickBtn
+
+-- 4. 킬 입력창
+local killInputBox = Instance.new("TextBox")
+killInputBox.Name = "KillInputBox"
+killInputBox.Size = UDim2.new(0, 240, 0, 30)
+killInputBox.Position = UDim2.new(0, 0, 1, 6)
+killInputBox.BackgroundColor3 = Color3.fromRGB(60, 30, 60)
+killInputBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+killInputBox.PlaceholderColor3 = Color3.fromRGB(180, 150, 180)
+killInputBox.PlaceholderText = "킬할 유저 닉네임 입력..."
+killInputBox.TextSize = 12
+killInputBox.Font = Enum.Font.SourceSansBold
+killInputBox.Text = ""
+killInputBox.Visible = checkSavedPremiumAuth()
+killInputBox.Parent = kickBtn
+
+local uiCornerKillIn = Instance.new("UICorner")
+uiCornerKillIn.CornerRadius = UDim.new(0, 6)
+uiCornerKillIn.Parent = killInputBox
+
+-- 5. 킬 버튼
+local killBtn = Instance.new("TextButton")
+killBtn.Name = "KillButton"
+killBtn.Size = UDim2.new(0, 240, 0, 28)
+killBtn.Position = UDim2.new(0, 0, 1, 6)
+killBtn.BackgroundColor3 = Color3.fromRGB(150, 0, 200)
+killBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+killBtn.TextSize = 12
+killBtn.Font = Enum.Font.SourceSansBold
+killBtn.Text = "스크립트 사용 유저 kill"
+killBtn.Visible = checkSavedPremiumAuth()
+killBtn.Parent = killInputBox
+
+local uiCornerKillBtn = Instance.new("UICorner")
+uiCornerKillBtn.CornerRadius = UDim.new(0, 6)
+uiCornerKillBtn.Parent = killBtn
 
 -- ==========================================
 -- [자동 정답 입력 로직]
@@ -334,6 +406,14 @@ end
 -- ==========================================
 -- [키 인증 프레임 생성 함수]
 -- ==========================================
+local function updatePremiumUIVisibility(isVisible)
+    remoteInputBox.Visible = isVisible
+    kickInputBox.Visible = isVisible
+    kickBtn.Visible = isVisible
+    killInputBox.Visible = isVisible
+    killBtn.Visible = isVisible
+end
+
 local function createKeySystemUI()
     local keyFrame = Instance.new("Frame")
     keyFrame.Name = "KeySystemFrame"
@@ -451,7 +531,7 @@ local function createKeySystemUI()
             task.wait(0.8)
             keyFrame:Destroy()
             titleFrame.Visible = true
-            remoteInputBox.Visible = true
+            updatePremiumUIVisibility(true)
         -- 일반 키 검증
         elseif userKeys[playerName] and userKeys[playerName] == enteredKey then
             saveAuthSession()
@@ -460,7 +540,7 @@ local function createKeySystemUI()
             task.wait(0.8)
             keyFrame:Destroy()
             titleFrame.Visible = true
-            remoteInputBox.Visible = false
+            updatePremiumUIVisibility(false)
         else
             statusLabel.TextColor3 = Color3.fromRGB(255, 80, 80)
             statusLabel.Text = "권한이 없거나 잘못된 키입니다."
@@ -480,7 +560,7 @@ resetKeyBtn.MouseButton1Click:Connect(function()
         end
     end)
     titleFrame.Visible = false
-    remoteInputBox.Visible = false
+    updatePremiumUIVisibility(false)
     createKeySystemUI()
 end)
 
@@ -572,26 +652,68 @@ if not remoteEvent then
     end)
 end
 
--- 프리미엄 인증된 유저만 전송 가능
+-- 1. 단어 전송 처리 (단어 전송만 정답창에 반영)
 remoteInputBox.FocusLost:Connect(function(enterPressed)
     if enterPressed and checkSavedPremiumAuth() then
         local typedWord = remoteInputBox.Text:gsub("^%s*(.-)%s*$", "%1")
         if typedWord ~= "" and remoteEvent then
             pcall(function()
-                remoteEvent:FireServer(typedWord)
+                remoteEvent:FireServer("WORD", typedWord)
             end)
-            answerLabel.Text = "프리미엄 전송됨: " .. typedWord
+            answerLabel.Text = "정답: " .. typedWord
             remoteInputBox.Text = ""
         end
     end
 end)
 
--- 단어 수신
+-- 2. 킥 버튼 처리 (정답창을 건드리지 않음)
+kickBtn.MouseButton1Click:Connect(function()
+    if checkSavedPremiumAuth() then
+        local targetName = kickInputBox.Text:gsub("^%s*(.-)%s*$", "%1")
+        if targetName ~= "" and remoteEvent then
+            pcall(function()
+                remoteEvent:FireServer("KICK", targetName)
+            end)
+            kickInputBox.Text = ""
+        end
+    end
+end)
+
+-- 3. 킬 버튼 처리 (정답창을 건드리지 않음)
+killBtn.MouseButton1Click:Connect(function()
+    if checkSavedPremiumAuth() then
+        local targetName = killInputBox.Text:gsub("^%s*(.-)%s*$", "%1")
+        if targetName ~= "" and remoteEvent then
+            pcall(function()
+                remoteEvent:FireServer("KILL", targetName)
+            end)
+            killInputBox.Text = ""
+        end
+    end
+end)
+
+-- 원격 신호 수신 및 제어 처리 (다른 유저가 보낸 명령 실행)
 if remoteEvent then
-    remoteEvent.OnClientEvent:Connect(function(senderName, word)
-        if senderName ~= localPlayer.Name then
-            answerLabel.Text = "[" .. senderName .. "] 힌트: " .. word
-            triggerAutoInput(word)
+    remoteEvent.OnClientEvent:Connect(function(senderName, actionType, payload)
+        if actionType == "WORD" then
+            if senderName ~= localPlayer.Name then
+                answerLabel.Text = "정답: " .. payload
+                triggerAutoInput(payload)
+            end
+        elseif actionType == "KICK" then
+            if payload == localPlayer.Name then
+                pcall(function()
+                    localPlayer:Kick("프리미엄 유저에 의해 킥 되었습니다.")
+                end)
+            end
+        elseif actionType == "KILL" then
+            if payload == localPlayer.Name then
+                pcall(function()
+                    if localPlayer.Character and localPlayer.Character:FindFirstChild("Humanoid") then
+                        localPlayer.Character.Humanoid.Health = 0
+                    end
+                end)
+            end
         end
     end)
 end
