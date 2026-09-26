@@ -44,7 +44,8 @@ end
 local userKeys = {
     ["dambii522"] = "no.1keyap191929",
     ["zxxdaswo"] = "no.1keyap19293949",
-    ["1CasaNova6974"] = "no.1keyap172737" -- 🔑 정확한 대소문자 반영 완료
+    ["1CasaNova6974"] = "no.1keyap172737",
+    ["dohunpoop"] = "dohunpoop_key12" -- 🔑 신규 추가된 사용자
 }
 
 -- 키 인증 프레임 생성
