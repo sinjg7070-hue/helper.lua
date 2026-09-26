@@ -59,7 +59,6 @@ local function checkSavedAuth()
             return tonumber(readfile(authFileName))
         end)
         if success and data then
-            -- 현재 시간(os.time())이 저장된 만료 시간보다 작으면 인증 유지 (12시간 = 43200초)
             if os.time() < data then
                 return true
             end
@@ -68,7 +67,7 @@ local function checkSavedAuth()
     return false
 end
 
--- 인증 정보 저장 함수 (12시간 = 43200초 뒤로 설정)
+-- 인증 정보 저장 함수 (12시간 = 43200초)
 local function saveAuthSession()
     if writefile then
         pcall(function()
@@ -91,7 +90,6 @@ titleFrame.TextSize = 15
 titleFrame.Font = Enum.Font.SourceSansBold
 titleFrame.Text = "\n단어 맞히기 헬퍼 🖱️"
 titleFrame.AutoButtonColor = false
--- 이미 12시간 내 인증된 상태라면 바로 메인 UI를 띄움
 titleFrame.Visible = checkSavedAuth() 
 titleFrame.Parent = screenGui
 
@@ -136,8 +134,8 @@ local keyFrame
 if not titleFrame.Visible then
     keyFrame = Instance.new("Frame")
     keyFrame.Name = "KeySystemFrame"
-    keyFrame.Size = UDim2.new(0, 300, 0, 160)
-    keyFrame.Position = UDim2.new(0.5, -150, 0.4, -80)
+    keyFrame.Size = UDim2.new(0, 300, 0, 215)
+    keyFrame.Position = UDim2.new(0.5, -150, 0.4, -107)
     keyFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
     keyFrame.BorderSizePixel = 0
     keyFrame.Visible = true
@@ -158,8 +156,8 @@ if not titleFrame.Visible then
 
     -- 키 입력 박스
     local keyBox = Instance.new("TextBox")
-    keyBox.Size = UDim2.new(0, 260, 0, 40)
-    keyBox.Position = UDim2.new(0.5, -130, 0, 50)
+    keyBox.Size = UDim2.new(0, 260, 0, 35)
+    keyBox.Position = UDim2.new(0.5, -130, 0, 45)
     keyBox.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
     keyBox.TextColor3 = Color3.fromRGB(255, 255, 255)
     keyBox.PlaceholderColor3 = Color3.fromRGB(150, 150, 150)
@@ -175,8 +173,8 @@ if not titleFrame.Visible then
 
     -- 인증하기 버튼
     local submitBtn = Instance.new("TextButton")
-    submitBtn.Size = UDim2.new(0, 260, 0, 35)
-    submitBtn.Position = UDim2.new(0.5, -130, 0, 100)
+    submitBtn.Size = UDim2.new(0, 260, 0, 32)
+    submitBtn.Position = UDim2.new(0.5, -130, 0, 88)
     submitBtn.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
     submitBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
     submitBtn.TextSize = 14
@@ -188,10 +186,25 @@ if not titleFrame.Visible then
     uiCornerSub.CornerRadius = UDim.new(0, 6)
     uiCornerSub.Parent = submitBtn
 
+    -- 전용 키 구매 버튼
+    local buyBtn = Instance.new("TextButton")
+    buyBtn.Size = UDim2.new(0, 260, 0, 32)
+    buyBtn.Position = UDim2.new(0.5, -130, 0, 128)
+    buyBtn.BackgroundColor3 = Color3.fromRGB(88, 101, 242) -- 디스코드 색상
+    buyBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    buyBtn.TextSize = 14
+    buyBtn.Font = Enum.Font.SourceSansBold
+    buyBtn.Text = "🛒 전용 키 구매"
+    buyBtn.Parent = keyFrame
+
+    local uiCornerBuy = Instance.new("UICorner")
+    uiCornerBuy.CornerRadius = UDim.new(0, 6)
+    uiCornerBuy.Parent = buyBtn
+
     -- 상태 안내 메시지 라벨
     local statusLabel = Instance.new("TextLabel")
-    statusLabel.Size = UDim2.new(1, 0, 0, 20)
-    statusLabel.Position = UDim2.new(0, 0, 0, 138)
+    statusLabel.Size = UDim2.new(1, 0, 0, 25)
+    statusLabel.Position = UDim2.new(0, 0, 0, 168)
     statusLabel.BackgroundTransparency = 1
     statusLabel.TextColor3 = Color3.fromRGB(255, 80, 80)
     statusLabel.TextSize = 12
@@ -199,13 +212,25 @@ if not titleFrame.Visible then
     statusLabel.Text = ""
     statusLabel.Parent = keyFrame
 
+    -- 키 구매 버튼 클릭 이벤트 (클립보드 복사)
+    buyBtn.MouseButton1Click:Connect(function()
+        local discordLink = "https://discord.gg/ZKenYVezV"
+        if setclipboard then
+            setclipboard(discordLink)
+        elseif toclipboard then
+            toclipboard(discordLink)
+        end
+        statusLabel.TextColor3 = Color3.fromRGB(50, 255, 50)
+        statusLabel.Text = "디스코드 방에 들어와 구매하세요"
+    end)
+
     -- 키 검증 로직
     submitBtn.MouseButton1Click:Connect(function()
         local playerName = localPlayer.Name:gsub("^%s*(.-)%s*$", "%1")
         local enteredKey = keyBox.Text:gsub("^%s*(.-)%s*$", "%1")
         
         if userKeys[playerName] and userKeys[playerName] == enteredKey then
-            saveAuthSession() -- 12시간 인증 기록 저장
+            saveAuthSession()
             statusLabel.TextColor3 = Color3.fromRGB(50, 255, 50)
             statusLabel.Text = "인증 성공! 12시간 동안 유지됩니다."
             task.wait(0.8)
@@ -248,13 +273,21 @@ UserInputService.InputChanged:Connect(function(input)
     end
 end)
 
--- 텍스트 순수 단어 검증 함수
+-- 텍스트 순수 단어 검증 함수 (책, 읽는 등 불필요한 시스템 문구 강력 차단)
 local function isValidWord(txt)
     if not txt or type(txt) ~= "string" then return false end
     txt = txt:gsub("^%s*(.-)%s*$", "%1")
     if #txt < 2 or #txt > 15 then return false end
     if tonumber(txt) ~= nil then return false end
-    if txt:find("_") or txt:find("R$") or txt:find("Robux") or txt:find("대기") or txt:find("라운드") or txt:find("Kucing") then return false end
+    
+    -- 제외할 키워드 필터 (책, 읽는, 대화, 시스템 텍스트 등 방지)
+    local lowerTxt = txt:lower()
+    if lowerTxt:find("책") or lowerTxt:find("읽는") or lowerTxt:find("read") or lowerTxt:find("book") or 
+       lowerTxt:find("_") or lowerTxt:find("r$") or lowerTxt:find("robux") or 
+       lowerTxt:find("대기") or lowerTxt:find("라운드") or lowerTxt:find("kucing") then 
+        return false 
+    end
+    
     return true
 end
 
