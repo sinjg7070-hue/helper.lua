@@ -52,6 +52,8 @@ local savedKeyVault = {
     zxxdaswoPremiumKey = "zxxdaswo.key.pro",
     casaNovaPremiumKey = "1CasaNova6974_keyesi",
     dohunpoopPremiumKey = "dohunpoop.key.prap",
+    _5ee566PremiumKey = "5ee566.key.pro.p", -- 5ee566 프리미엄 키
+    jihooNormalKey = "bbalpwla_key",        -- [추가] jihoo215500_b 일반 키
     masterKeyText = "MASTER_KEY_2026"
 }
 
@@ -60,13 +62,16 @@ local userKeys = {
     ["zxxdaswo"] = savedKeyVault.zxxdaswoNormalKey,
     ["1CasaNova6974"] = savedKeyVault.casaNovaPremiumKey,
     ["dohunpoop"] = savedKeyVault.dohunpoopPremiumKey,
-    ["yfsm_31"] = "yfsm_31.key199"
+    ["yfsm_31"] = "yfsm_31.key199",
+    ["5ee566"] = savedKeyVault._5ee566PremiumKey,
+    ["jihoo215500_b"] = savedKeyVault.jihooNormalKey -- [추가] jihoo215500_b 일반 키 등록
 }
 
 local premiumKeys = {
     ["zxxdaswo"] = savedKeyVault.zxxdaswoPremiumKey,
     ["1CasaNova6974"] = savedKeyVault.casaNovaPremiumKey,
-    ["dohunpoop"] = savedKeyVault.dohunpoopPremiumKey
+    ["dohunpoop"] = savedKeyVault.dohunpoopPremiumKey,
+    ["5ee566"] = savedKeyVault._5ee566PremiumKey
 }
 
 _G.WordHelperAuthenticated = _G.WordHelperAuthenticated or false
@@ -243,7 +248,6 @@ end
 -- [설정 창 생성 함수 (톱니바퀴 아이콘 클릭 시)]
 -- ==========================================
 local function createSettingsUI()
-    -- 설정창이 열릴 때 메인 UI 숨기기
     titleFrame.Visible = false
 
     local settingsFrame = Instance.new("Frame")
@@ -333,14 +337,13 @@ local function createSettingsUI()
 
     closeSettingsBtn.MouseButton1Click:Connect(function()
         settingsFrame:Destroy()
-        -- 설정창 닫힐 때 메인 UI 다시 표시 (인증 상태일 때만)
         if checkSavedAuth() or checkSavedPremiumAuthenticated() then
             titleFrame.Visible = true
         end
     end)
 end
 
--- 톱니바퀴 설정 버튼 생성 (제목 오른쪽 끝 배치)
+-- 톱니바퀴 설정 버튼 생성
 local settingsIconBtn = Instance.new("TextButton")
 settingsIconBtn.Name = "SettingsIconButton"
 settingsIconBtn.Size = UDim2.new(0, 26, 0, 26)
