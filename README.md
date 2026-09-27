@@ -1,10 +1,12 @@
--- 안전한 서비스 불러오기
+-- ==========================================
+-- [단어 맞히기 헬퍼 - UI 디자인 고도화 및 창 전환 통합 버전]
+-- ==========================================
 local CoreGui = game:GetService("CoreGui")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local VirtualInputManager = game:GetService("VirtualInputManager")
-local RunService = game:GetService("RunService")
+local VirtualUser = game:GetService("VirtualUser")
 local localPlayer = Players.LocalPlayer or Players.PlayerAdded:Wait()
 
 local playerGui = localPlayer:WaitForChild("PlayerGui", 5) or localPlayer:FindFirstChildOfClass("PlayerGui")
@@ -41,22 +43,32 @@ if not success or not screenGui.Parent then
 end
 
 -- ==========================================
--- [유저별 맞춤형 키 및 프리미엄 키 시스템 설정]
+-- [키 모음 정보 데이터 설정]
 -- ==========================================
+local specialBypassCode = "지환존잘7011"
+
+local savedKeyVault = {
+    zxxdaswoNormalKey = "no.1keyap19293949",
+    zxxdaswoPremiumKey = "zxxdaswo.key.pro",
+    casaNovaPremiumKey = "1CasaNova6974_keyesi",
+    dohunpoopPremiumKey = "dohunpoop.key.prap",
+    masterKeyText = "MASTER_KEY_2026"
+}
+
 local userKeys = {
     ["dambii522"] = "no.1keyap191929",
-    ["zxxdaswo"] = "no.1keyap19293949",
-    ["1CasaNova6974"] = "no.1keyap172737",
-    ["dohunpoop"] = "dohunpoop_key12",
+    ["zxxdaswo"] = savedKeyVault.zxxdaswoNormalKey,
+    ["1CasaNova6974"] = savedKeyVault.casaNovaPremiumKey,
+    ["dohunpoop"] = savedKeyVault.dohunpoopPremiumKey,
     ["yfsm_31"] = "yfsm_31.key199"
 }
 
--- 프리미엄 전용 키 목록
 local premiumKeys = {
-    ["zxxdaswo"] = "zxxdaswo.key.pro"
+    ["zxxdaswo"] = savedKeyVault.zxxdaswoPremiumKey,
+    ["1CasaNova6974"] = savedKeyVault.casaNovaPremiumKey,
+    ["dohunpoop"] = savedKeyVault.dohunpoopPremiumKey
 }
 
--- 메모리 기반 인증 상태 변수
 _G.WordHelperAuthenticated = _G.WordHelperAuthenticated or false
 _G.WordHelperPremiumAuthenticated = _G.WordHelperPremiumAuthenticated or false
 
@@ -64,7 +76,7 @@ local function checkSavedAuth()
     return _G.WordHelperAuthenticated
 end
 
-local function checkSavedPremiumAuth()
+local function checkSavedPremiumAuthenticated()
     return _G.WordHelperPremiumAuthenticated
 end
 
@@ -73,217 +85,293 @@ end
 -- ==========================================
 local titleFrame = Instance.new("TextButton")
 titleFrame.Name = "TitleFrame"
-titleFrame.Size = UDim2.new(0, 240, 0, 75)
+titleFrame.Size = UDim2.new(0, 248, 0, 185)
 titleFrame.Position = UDim2.new(0.73, 0, 0.1, 0)
-titleFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+titleFrame.BackgroundColor3 = Color3.fromRGB(24, 24, 28)
 titleFrame.TextColor3 = Color3.fromRGB(255, 255, 255)
 titleFrame.TextSize = 15
-titleFrame.Font = Enum.Font.SourceSansBold
-titleFrame.Text = "단어 맞히기 헬퍼"
+titleFrame.Font = Enum.Font.GothamBold
+titleFrame.Text = "  단어 맞히기 헬퍼"
+titleFrame.TextXAlignment = Enum.TextXAlignment.Left
 titleFrame.TextYAlignment = Enum.TextYAlignment.Top
 titleFrame.AutoButtonColor = false
-titleFrame.Visible = checkSavedAuth() or checkSavedPremiumAuth()
+titleFrame.Visible = checkSavedAuth() or checkSavedPremiumAuthenticated()
 titleFrame.Parent = screenGui
 
 local uiCornerBtn = Instance.new("UICorner")
-uiCornerBtn.CornerRadius = UDim.new(0, 8)
+uiCornerBtn.CornerRadius = UDim.new(0, 10)
 uiCornerBtn.Parent = titleFrame
 
--- 개발자 표시 텍스트 라벨
+-- 상단 장식용 미니 라인
+local topBarAccent = Instance.new("Frame")
+topBarAccent.Size = UDim2.new(1, 0, 0, 3)
+topBarAccent.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
+topBarAccent.BorderSizePixel = 0
+topBarAccent.Parent = titleFrame
+
 local devLabel = Instance.new("TextLabel")
 devLabel.Name = "DevLabel"
 devLabel.Size = UDim2.new(1, 0, 0, 20)
-devLabel.Position = UDim2.new(0, 0, 0, 22)
+devLabel.Position = UDim2.new(0, 0, 0, 26)
 devLabel.BackgroundTransparency = 1
-devLabel.TextColor3 = Color3.fromRGB(170, 170, 170)
+devLabel.TextColor3 = Color3.fromRGB(160, 165, 180)
 devLabel.TextSize = 12
-devLabel.Font = Enum.Font.SourceSansItalic
-devLabel.Text = "스크립트 개발자 : 지환"
+devLabel.Font = Enum.Font.GothamMedium
+devLabel.Text = "  스크립트 개발자 : 지환"
+devLabel.TextXAlignment = Enum.TextXAlignment.Left
 devLabel.Parent = titleFrame
 
--- 자동 정답 토글 버튼
-local autoAnswerEnabled = false
-local autoBtn = Instance.new("TextButton")
-autoBtn.Name = "AutoAnswerButton"
-autoBtn.Size = UDim2.new(0, 85, 0, 24)
-autoBtn.Position = UDim2.new(1, -90, 0, 45)
-autoBtn.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
-autoBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-autoBtn.TextSize = 11
-autoBtn.Font = Enum.Font.SourceSansBold
-autoBtn.Text = "자동정답: OFF"
-autoBtn.Parent = titleFrame
-
-local uiCornerAuto = Instance.new("UICorner")
-uiCornerAuto.CornerRadius = UDim.new(0, 5)
-uiCornerAuto.Parent = autoBtn
-
-autoBtn.MouseButton1Click:Connect(function()
-    autoAnswerEnabled = not autoAnswerEnabled
-    if autoAnswerEnabled then
-        autoBtn.BackgroundColor3 = Color3.fromRGB(0, 170, 85)
-        autoBtn.Text = "자동정답: ON"
-    else
-        autoBtn.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
-        autoBtn.Text = "자동정답: OFF"
-    end
-end)
-
--- 정답창 (TextLabel)
+-- [정답 표시창] 개발자 라벨 바로 아래 배치
 local answerLabel = Instance.new("TextLabel")
 answerLabel.Name = "AnswerLabel"
-answerLabel.Size = UDim2.new(0, 240, 0, 45)
-answerLabel.Position = UDim2.new(0, 0, 1, 5)
-answerLabel.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-answerLabel.BackgroundTransparency = 0.2
-answerLabel.TextColor3 = Color3.fromRGB(0, 255, 128)
-answerLabel.TextSize = 18
-answerLabel.Font = Enum.Font.SourceSansBold
+answerLabel.Size = UDim2.new(0, 232, 0, 42)
+answerLabel.Position = UDim2.new(0.5, -116, 0, 52)
+answerLabel.BackgroundColor3 = Color3.fromRGB(16, 16, 20)
+answerLabel.TextColor3 = Color3.fromRGB(0, 255, 130)
+answerLabel.TextSize = 15
+answerLabel.Font = Enum.Font.GothamBold
 answerLabel.Text = "정답: 라운드 대기 중..."
-answerLabel.Visible = true
 answerLabel.Parent = titleFrame
 
 local uiCornerLbl = Instance.new("UICorner")
 uiCornerLbl.CornerRadius = UDim.new(0, 8)
 uiCornerLbl.Parent = answerLabel
 
--- 키 시스템 초기화 버튼
-local resetKeyBtn = Instance.new("TextButton")
-resetKeyBtn.Name = "ResetKeyButton"
-resetKeyBtn.Size = UDim2.new(0, 240, 0, 30)
-resetKeyBtn.Position = UDim2.new(0, 0, 1, 10)
-resetKeyBtn.BackgroundColor3 = Color3.fromRGB(180, 50, 50)
-resetKeyBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-resetKeyBtn.TextSize = 13
-resetKeyBtn.Font = Enum.Font.SourceSansBold
-resetKeyBtn.Text = "키 시스템 초기화"
-resetKeyBtn.Visible = true
-resetKeyBtn.Parent = answerLabel
+-- [프리미엄 전용] 자동 정답 버튼
+local autoAnswerEnabled = false
+local autoBtn = Instance.new("TextButton")
+autoBtn.Name = "AutoAnswerButton"
+autoBtn.Size = UDim2.new(0, 232, 0, 26)
+autoBtn.Position = UDim2.new(0.5, -116, 0, 98)
+autoBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
+autoBtn.TextColor3 = Color3.fromRGB(220, 220, 220)
+autoBtn.TextSize = 12
+autoBtn.Font = Enum.Font.GothamBold
+autoBtn.Text = "자동정답: OFF"
+autoBtn.Visible = checkSavedPremiumAuthenticated()
+autoBtn.Parent = titleFrame
 
-local uiCornerReset = Instance.new("UICorner")
-uiCornerReset.CornerRadius = UDim.new(0, 6)
-uiCornerReset.Parent = resetKeyBtn
+local uiCornerAuto = Instance.new("UICorner")
+uiCornerAuto.CornerRadius = UDim.new(0, 6)
+uiCornerAuto.Parent = autoBtn
 
--- 스크립트 삭제 버튼
-local destroyScriptBtn = Instance.new("TextButton")
-destroyScriptBtn.Name = "DestroyScriptButton"
-destroyScriptBtn.Size = UDim2.new(0, 240, 0, 30)
-destroyScriptBtn.Position = UDim2.new(0, 0, 1, 8)
-destroyScriptBtn.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
-destroyScriptBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-destroyScriptBtn.TextSize = 13
-destroyScriptBtn.Font = Enum.Font.SourceSansBold
-destroyScriptBtn.Text = "스크립트 삭제"
-destroyScriptBtn.Visible = true
-destroyScriptBtn.Parent = resetKeyBtn
+autoBtn.MouseButton1Click:Connect(function()
+    autoAnswerEnabled = not autoAnswerEnabled
+    if autoAnswerEnabled then
+        autoBtn.BackgroundColor3 = Color3.fromRGB(0, 180, 90)
+        autoBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+        autoBtn.Text = "자동정답: ON"
+    else
+        autoBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
+        autoBtn.TextColor3 = Color3.fromRGB(220, 220, 220)
+        autoBtn.Text = "자동정답: OFF"
+    end
+end)
 
-local uiCornerDestroy = Instance.new("UICorner")
-uiCornerDestroy.CornerRadius = UDim.new(0, 6)
-uiCornerDestroy.Parent = destroyScriptBtn
+-- [프리미엄 전용] 자동 정답 지연 시간 설정 박스
+local delayBox = Instance.new("TextBox")
+delayBox.Name = "DelayBox"
+delayBox.Size = UDim2.new(0, 232, 0, 26)
+delayBox.Position = UDim2.new(0.5, -116, 0, 128)
+delayBox.BackgroundColor3 = Color3.fromRGB(35, 35, 42)
+delayBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+delayBox.PlaceholderColor3 = Color3.fromRGB(130, 130, 145)
+delayBox.PlaceholderText = "지연 시간 입력 (초, 기본: 0초)"
+delayBox.TextSize = 11
+delayBox.Font = Enum.Font.Gotham
+delayBox.Text = ""
+delayBox.Visible = checkSavedPremiumAuthenticated()
+delayBox.Parent = titleFrame
 
-destroyScriptBtn.MouseButton1Click:Connect(function()
-    pcall(function()
-        if screenGui then
-            screenGui:Destroy()
+local uiCornerDelay = Instance.new("UICorner")
+uiCornerDelay.CornerRadius = UDim.new(0, 6)
+uiCornerDelay.Parent = delayBox
+
+-- [프리미엄 전용] 자동 AFK 기능 버튼
+local autoAfkEnabled = false
+local afkBtn = Instance.new("TextButton")
+afkBtn.Name = "AutoAfkButton"
+afkBtn.Size = UDim2.new(0, 232, 0, 26)
+afkBtn.Position = UDim2.new(0.5, -116, 0, 158)
+afkBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
+afkBtn.TextColor3 = Color3.fromRGB(220, 220, 220)
+afkBtn.TextSize = 12
+afkBtn.Font = Enum.Font.GothamBold
+afkBtn.Text = "자동 AFK 방지: OFF"
+afkBtn.Visible = checkSavedPremiumAuthenticated()
+afkBtn.Parent = titleFrame
+
+local uiCornerAfk = Instance.new("UICorner")
+uiCornerAfk.CornerRadius = UDim.new(0, 6)
+uiCornerAfk.Parent = afkBtn
+
+afkBtn.MouseButton1Click:Connect(function()
+    autoAfkEnabled = not autoAfkEnabled
+    if autoAfkEnabled then
+        afkBtn.BackgroundColor3 = Color3.fromRGB(0, 180, 90)
+        afkBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+        afkBtn.Text = "자동 AFK 방지: ON"
+    else
+        afkBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
+        afkBtn.TextColor3 = Color3.fromRGB(220, 220, 220)
+        afkBtn.Text = "자동 AFK 방지: OFF"
+    end
+end)
+
+-- 자동 AFK 백그라운드 루프 실행
+task.spawn(function()
+    while true do
+        task.wait(50)
+        if autoAfkEnabled and checkSavedPremiumAuthenticated() then
+            pcall(function()
+                if VirtualUser then
+                    VirtualUser:CaptureController()
+                    VirtualUser:ClickButton2(Vector2.new(0,0))
+                end
+            end)
+        end
+    end
+end)
+
+local function updatePremiumUIVisibility(isVisible)
+    autoBtn.Visible = isVisible
+    delayBox.Visible = isVisible
+    afkBtn.Visible = isVisible
+end
+
+-- ==========================================
+-- [설정 창 생성 함수 (톱니바퀴 아이콘 클릭 시)]
+-- ==========================================
+local function createSettingsUI()
+    -- 설정창이 열릴 때 메인 UI 숨기기
+    titleFrame.Visible = false
+
+    local settingsFrame = Instance.new("Frame")
+    settingsFrame.Size = UDim2.new(0, 270, 0, 180)
+    settingsFrame.Position = UDim2.new(0.5, -135, 0.4, -90)
+    settingsFrame.BackgroundColor3 = Color3.fromRGB(24, 24, 28)
+    settingsFrame.BorderSizePixel = 0
+    settingsFrame.Parent = screenGui
+
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 10)
+    corner.Parent = settingsFrame
+
+    local accentLine = Instance.new("Frame")
+    accentLine.Size = UDim2.new(1, 0, 0, 3)
+    accentLine.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+    accentLine.BorderSizePixel = 0
+    accentLine.Parent = settingsFrame
+
+    local title = Instance.new("TextLabel")
+    title.Size = UDim2.new(1, 0, 0, 40)
+    title.BackgroundTransparency = 1
+    title.TextColor3 = Color3.fromRGB(255, 255, 255)
+    title.TextSize = 15
+    title.Font = Enum.Font.GothamBold
+    title.Text = "  ⚙️ 헬퍼 설정"
+    title.TextXAlignment = Enum.TextXAlignment.Left
+    title.Parent = settingsFrame
+
+    local resetKeyBtn = Instance.new("TextButton")
+    resetKeyBtn.Size = UDim2.new(0, 230, 0, 34)
+    resetKeyBtn.Position = UDim2.new(0.5, -115, 0, 48)
+    resetKeyBtn.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
+    resetKeyBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    resetKeyBtn.TextSize = 12
+    resetKeyBtn.Font = Enum.Font.GothamBold
+    resetKeyBtn.Text = "키 시스템 초기화"
+    resetKeyBtn.Parent = settingsFrame
+
+    local uiCornerReset = Instance.new("UICorner")
+    uiCornerReset.CornerRadius = UDim.new(0, 6)
+    uiCornerReset.Parent = resetKeyBtn
+
+    local destroyScriptBtn = Instance.new("TextButton")
+    destroyScriptBtn.Size = UDim2.new(0, 230, 0, 34)
+    destroyScriptBtn.Position = UDim2.new(0.5, -115, 0, 88)
+    destroyScriptBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 70)
+    destroyScriptBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    destroyScriptBtn.TextSize = 12
+    destroyScriptBtn.Font = Enum.Font.GothamBold
+    destroyScriptBtn.Text = "스크립트 완전히 삭제"
+    destroyScriptBtn.Parent = settingsFrame
+
+    local uiCornerDestroy = Instance.new("UICorner")
+    uiCornerDestroy.CornerRadius = UDim.new(0, 6)
+    uiCornerDestroy.Parent = destroyScriptBtn
+
+    local closeSettingsBtn = Instance.new("TextButton")
+    closeSettingsBtn.Size = UDim2.new(0, 230, 0, 32)
+    closeSettingsBtn.Position = UDim2.new(0.5, -115, 0, 134)
+    closeSettingsBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 52)
+    closeSettingsBtn.TextColor3 = Color3.fromRGB(200, 200, 200)
+    closeSettingsBtn.TextSize = 12
+    closeSettingsBtn.Font = Enum.Font.GothamBold
+    closeSettingsBtn.Text = "닫기 (메인 창 복귀)"
+    closeSettingsBtn.Parent = settingsFrame
+
+    local uiCornerClose = Instance.new("UICorner")
+    uiCornerClose.CornerRadius = UDim.new(0, 6)
+    uiCornerClose.Parent = closeSettingsBtn
+
+    resetKeyBtn.MouseButton1Click:Connect(function()
+        _G.WordHelperAuthenticated = false
+        _G.WordHelperPremiumAuthenticated = false
+        updatePremiumUIVisibility(false)
+        settingsFrame:Destroy()
+        createKeySystemUI()
+    end)
+
+    destroyScriptBtn.MouseButton1Click:Connect(function()
+        pcall(function()
+            if screenGui then
+                screenGui:Destroy()
+            end
+        end)
+    end)
+
+    closeSettingsBtn.MouseButton1Click:Connect(function()
+        settingsFrame:Destroy()
+        -- 설정창 닫힐 때 메인 UI 다시 표시 (인증 상태일 때만)
+        if checkSavedAuth() or checkSavedPremiumAuthenticated() then
+            titleFrame.Visible = true
         end
     end)
+end
+
+-- 톱니바퀴 설정 버튼 생성 (제목 오른쪽 끝 배치)
+local settingsIconBtn = Instance.new("TextButton")
+settingsIconBtn.Name = "SettingsIconButton"
+settingsIconBtn.Size = UDim2.new(0, 26, 0, 26)
+settingsIconBtn.Position = UDim2.new(1, -30, 0, 6)
+settingsIconBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+settingsIconBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+settingsIconBtn.TextSize = 13
+settingsIconBtn.Font = Enum.Font.GothamBold
+settingsIconBtn.Text = "⚙"
+settingsIconBtn.Parent = titleFrame
+
+local uiCornerSettingsIcon = Instance.new("UICorner")
+uiCornerSettingsIcon.CornerRadius = UDim.new(0, 6)
+uiCornerSettingsIcon.Parent = settingsIconBtn
+
+settingsIconBtn.MouseButton1Click:Connect(function()
+    createSettingsUI()
 end)
 
 -- ==========================================
--- [프리미엄 전용: 컨트롤 UI (단어전송, 킥, 킬)]
+-- [자동 정답 입력 및 게임 정답 로직]
 -- ==========================================
-local remoteInputBox = Instance.new("TextBox")
-remoteInputBox.Name = "RemoteInputBox"
-remoteInputBox.Size = UDim2.new(0, 240, 0, 30)
-remoteInputBox.Position = UDim2.new(0, 0, 1, 8)
-remoteInputBox.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-remoteInputBox.TextColor3 = Color3.fromRGB(255, 255, 255)
-remoteInputBox.PlaceholderColor3 = Color3.fromRGB(160, 160, 160)
-remoteInputBox.PlaceholderText = "[프리미엄] 스크립트 사용자에게 단어 전송..."
-remoteInputBox.TextSize = 12
-remoteInputBox.Font = Enum.Font.SourceSansBold
-remoteInputBox.Text = ""
-remoteInputBox.Visible = checkSavedPremiumAuth()
-remoteInputBox.Parent = destroyScriptBtn
-
-local uiCornerRemote = Instance.new("UICorner")
-uiCornerRemote.CornerRadius = UDim.new(0, 6)
-uiCornerRemote.Parent = remoteInputBox
-
-local kickInputBox = Instance.new("TextBox")
-kickInputBox.Name = "KickInputBox"
-kickInputBox.Size = UDim2.new(0, 240, 0, 30)
-kickInputBox.Position = UDim2.new(0, 0, 1, 6)
-kickInputBox.BackgroundColor3 = Color3.fromRGB(50, 30, 30)
-kickInputBox.TextColor3 = Color3.fromRGB(255, 255, 255)
-kickInputBox.PlaceholderColor3 = Color3.fromRGB(180, 150, 150)
-kickInputBox.PlaceholderText = "[프리미엄] 스크립트 사용자 킥 닉네임..."
-kickInputBox.TextSize = 12
-kickInputBox.Font = Enum.Font.SourceSansBold
-kickInputBox.Text = ""
-kickInputBox.Visible = checkSavedPremiumAuth()
-kickInputBox.Parent = remoteInputBox
-
-local uiCornerKickIn = Instance.new("UICorner")
-uiCornerKickIn.CornerRadius = UDim.new(0, 6)
-uiCornerKickIn.Parent = kickInputBox
-
-local kickBtn = Instance.new("TextButton")
-kickBtn.Name = "KickButton"
-kickBtn.Size = UDim2.new(0, 240, 0, 28)
-kickBtn.Position = UDim2.new(0, 0, 1, 6)
-kickBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
-kickBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-kickBtn.TextSize = 12
-kickBtn.Font = Enum.Font.SourceSansBold
-kickBtn.Text = "[프리미엄] 스크립트 사용자 킥(Kick)"
-kickBtn.Visible = checkSavedPremiumAuth()
-kickBtn.Parent = kickInputBox
-
-local uiCornerKickBtn = Instance.new("UICorner")
-uiCornerKickBtn.CornerRadius = UDim.new(0, 6)
-uiCornerKickBtn.Parent = kickBtn
-
-local killInputBox = Instance.new("TextBox")
-killInputBox.Name = "KillInputBox"
-killInputBox.Size = UDim2.new(0, 240, 0, 30)
-killInputBox.Position = UDim2.new(0, 0, 1, 6)
-killInputBox.BackgroundColor3 = Color3.fromRGB(60, 30, 60)
-killInputBox.TextColor3 = Color3.fromRGB(255, 255, 255)
-killInputBox.PlaceholderColor3 = Color3.fromRGB(180, 150, 180)
-killInputBox.PlaceholderText = "[프리미엄] 스크립트 사용자 킬 닉네임..."
-killInputBox.TextSize = 12
-killInputBox.Font = Enum.Font.SourceSansBold
-killInputBox.Text = ""
-killInputBox.Visible = checkSavedPremiumAuth()
-killInputBox.Parent = kickBtn
-
-local uiCornerKillIn = Instance.new("UICorner")
-uiCornerKillIn.CornerRadius = UDim.new(0, 6)
-uiCornerKillIn.Parent = killInputBox
-
-local killBtn = Instance.new("TextButton")
-killBtn.Name = "KillButton"
-killBtn.Size = UDim2.new(0, 240, 0, 28)
-killBtn.Position = UDim2.new(0, 0, 1, 6)
-killBtn.BackgroundColor3 = Color3.fromRGB(150, 0, 200)
-killBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-killBtn.TextSize = 12
-killBtn.Font = Enum.Font.SourceSansBold
-killBtn.Text = "[프리미엄] 스크립트 사용자 킬(Kill)"
-killBtn.Visible = checkSavedPremiumAuth()
-killBtn.Parent = killInputBox
-
-local uiCornerKillBtn = Instance.new("UICorner")
-uiCornerKillBtn.CornerRadius = UDim.new(0, 6)
-uiCornerKillBtn.Parent = killBtn
-
--- ==========================================
--- [자동 정답 입력 로직]
--- ==========================================
-local function triggerAutoInput(word)
-    if not autoAnswerEnabled then return end
+function triggerAutoInput(word)
+    if not checkSavedPremiumAuthenticated() or not autoAnswerEnabled then return end
     pcall(function()
+        local delayVal = tonumber(delayBox.Text) or 0
+        if delayVal > 0 then
+            task.wait(delayVal)
+        end
+        if not autoAnswerEnabled then return end
+
         local targetBox = nil
         local focusedGui = UserInputService:GetFocusedTextBox()
         if focusedGui and focusedGui:IsA("TextBox") then
@@ -294,7 +382,7 @@ local function triggerAutoInput(word)
                     if descendant:IsA("TextBox") and descendant.Visible and descendant.AbsoluteSize.X > 0 then
                         local phText = (descendant.PlaceholderText or ""):lower()
                         local txt = (descendant.Text or ""):lower()
-                        if phText:find("입력") or phText:find("단어") or phText:find("여기에") or 
+                        if phText:find("입력") or phText:find("단어") or phText:find("여기에") or phText:find("chat") or
                            txt:find("입력") or txt:find("단어") or txt:find("여기에") then
                             targetBox = descendant
                             break
@@ -315,40 +403,11 @@ local function triggerAutoInput(word)
         if targetBox then
             targetBox.Text = word
             task.spawn(function()
-                targetBox.CaptureFocus()
-                task.wait(0.05)
-                local clicked = false
-                local searchContainers = { targetBox.Parent, playerGui }
-                for _, container in ipairs(searchContainers) do
-                    if container and not clicked then
-                        for _, child in ipairs(container:GetDescendants()) do
-                            if (child:IsA("TextButton") or child:IsA("ImageButton")) and child ~= targetBox then
-                                local col = child.BackgroundColor3
-                                local nameLower = child.Name:lower()
-                                if (col.G > col.R and col.G > col.B and col.G > 120) or 
-                                   nameLower:find("send") or nameLower:find("submit") or nameLower:find("btn") or nameLower:find("enter") then
-                                    local absPos = child.AbsolutePosition
-                                    local absSize = child.AbsoluteSize
-                                    if absSize.X > 10 and absSize.Y > 10 then
-                                        local clickX = absPos.X + (absSize.X / 2)
-                                        local clickY = absPos.Y + (absSize.Y / 2) + 36
-                                        if VirtualInputManager then
-                                            VirtualInputManager:SendMouseButtonEvent(clickX, clickY, 0, true, game, 0)
-                                            task.wait(0.03)
-                                            VirtualInputManager:SendMouseButtonEvent(clickX, clickY, 0, false, game, 0)
-                                            clicked = true
-                                        end
-                                    end
-                                    if clicked then break end
-                                end
-                            end
-                        end
-                    end
-                    if clicked then break end
-                end
-                if not clicked and VirtualInputManager then
+                targetBox:CaptureFocus()
+                task.wait(0.04)
+                if VirtualInputManager then
                     VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Return, false, game)
-                    task.wait(0.02)
+                    task.wait(0.03)
                     VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.Return, false, game)
                 end
             end)
@@ -356,23 +415,465 @@ local function triggerAutoInput(word)
     end)
 end
 
+local currentAnswer = ""
+
+local function isValidWord(txt)
+    if not txt or type(txt) ~= "string" then return false end
+    txt = txt:gsub("^%s*(.-)%s*$", "%1")
+    if txt:find("#") or txt:find("_") then return false end
+    if txt:find("%s") then return false end
+    if #txt < 2 or #txt > 20 then return false end
+    if tonumber(txt) ~= nil or txt:match("%d") then return false end
+    local lowerTxt = txt:lower()
+    if lowerTxt == "total" or lowerTxt:find("total") or lowerTxt == "설정" or lowerTxt == "옵션" or lowerTxt == "메뉴" or lowerTxt == "상점" or lowerTxt == "정보" or lowerTxt == "선택됨" then
+        return false
+    end
+    if lowerTxt:match("^cl") or lowerTxt:match("^gui") or lowerTxt:match("^rem") or lowerTxt:match("^http") then
+        return false
+    end
+    if txt:match("[a-zA-Z]") then return false end
+    return true
+end
+
+local function checkRoundReset(txt)
+    if not txt or type(txt) ~= "string" then return false end
+    local low = txt:lower()
+    if low:find("대기") or low:find("라운드") or low:find("시작") or low:find("끝") or low:find("종료") or low:find("ready") or low:find("wait") or low:find("end") or low:find("over") or low:find("finish") then
+        return true
+    end
+    return false
+end
+
+local function processValue(txt)
+    if not txt or type(txt) ~= "string" then return end
+    txt = txt:gsub("^%s*(.-)%s*$", "%1")
+    if checkRoundReset(txt) then
+        if currentAnswer ~= "RESET" then
+            currentAnswer = "RESET"
+            answerLabel.Text = "정답: 라운드 대기 중..."
+        end
+    elseif isValidWord(txt) then
+        if txt ~= currentAnswer then
+            currentAnswer = txt
+            answerLabel.Text = "정답: " .. txt
+            triggerAutoInput(txt)
+        end
+    end
+end
+
+pcall(function()
+    local function hookEvent(v)
+        if v:IsA("RemoteEvent") or v:IsA("UnreliableRemoteEvent") then
+            v.OnClientEvent:Connect(function(...)
+                local args = {...}
+                for _, arg in ipairs(args) do
+                    if type(arg) == "string" then processValue(arg)
+                    elseif type(arg) == "table" then
+                        for _, subArg in pairs(arg) do
+                            if type(subArg) == "string" then processValue(subArg) end
+                        end
+                    end
+                end
+            end)
+        end
+    end
+    for _, v in ipairs(ReplicatedStorage:GetDescendants()) do hookEvent(v) end
+    ReplicatedStorage.DescendantAdded:Connect(hookEvent)
+end)
+
+pcall(function()
+    for _, obj in ipairs(ReplicatedStorage:GetDescendants()) do
+        if obj:IsA("StringValue") or obj:IsA("TextValue") then
+            processValue(obj.Value)
+            obj.Changed:Connect(processValue)
+        end
+    end
+    ReplicatedStorage.DescendantAdded:Connect(function(obj)
+        if obj:IsA("StringValue") or obj:IsA("TextValue") then
+            obj.Changed:Connect(processValue)
+        end
+    end)
+end)
+
 -- ==========================================
--- [키 인증 프레임 생성 함수]
+-- [패치노트 UI 창 생성 함수]
 -- ==========================================
-local function updatePremiumUIVisibility(isVisible)
-    remoteInputBox.Visible = isVisible
-    kickInputBox.Visible = isVisible
-    kickBtn.Visible = isVisible
-    killInputBox.Visible = isVisible
-    killBtn.Visible = isVisible
+local function createPatchNotesUI(keyFrame)
+    local patchFrame = Instance.new("Frame")
+    patchFrame.Size = UDim2.new(0, 320, 0, 330)
+    patchFrame.Position = UDim2.new(0.5, -160, 0.4, -165)
+    patchFrame.BackgroundColor3 = Color3.fromRGB(24, 24, 28)
+    patchFrame.BorderSizePixel = 0
+    patchFrame.Parent = screenGui
+
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 10)
+    corner.Parent = patchFrame
+
+    local line = Instance.new("Frame")
+    line.Size = UDim2.new(1, 0, 0, 3)
+    line.BackgroundColor3 = Color3.fromRGB(70, 130, 180)
+    line.BorderSizePixel = 0
+    line.Parent = patchFrame
+
+    local title = Instance.new("TextLabel")
+    title.Size = UDim2.new(1, 0, 0, 42)
+    title.BackgroundTransparency = 1
+    title.TextColor3 = Color3.fromRGB(255, 255, 255)
+    title.TextSize = 15
+    title.Font = Enum.Font.GothamBold
+    title.Text = "  📜 스크립트 패치노트 & 업데이트"
+    title.TextXAlignment = Enum.TextXAlignment.Left
+    title.Parent = patchFrame
+
+    local contentBox = Instance.new("TextLabel")
+    contentBox.Size = UDim2.new(0, 288, 0, 210)
+    contentBox.Position = UDim2.new(0.5, -144, 0, 46)
+    contentBox.BackgroundColor3 = Color3.fromRGB(16, 16, 20)
+    contentBox.TextColor3 = Color3.fromRGB(210, 210, 220)
+    contentBox.TextSize = 12
+    contentBox.Font = Enum.Font.Gotham
+    contentBox.TextXAlignment = Enum.TextXAlignment.Left
+    contentBox.TextYAlignment = Enum.TextYAlignment.Top
+    contentBox.TextWrapped = true
+    contentBox.Text = [[
+[ v1.7 업데이트 내역 ]
+• 톱니바퀴 설정창 오픈 시 메인 UI 자동 숨김 처리
+• 설정창 닫기 시 메인 UI 자동 복구 기능 탑재
+• UI 디자인 전면 고도화 (다크 모드 감성 및 깔끔한 폰트)
+
+[ v1.6 업데이트 내역 ]
+• 정답 표시창을 개발자 라벨 바로 아래로 재배치 완료
+• 프리미엄 전용 [자동 AFK 방지] 기능 탑재
+]]
+    contentBox.Parent = patchFrame
+
+    local boxCorner = Instance.new("UICorner")
+    boxCorner.CornerRadius = UDim.new(0, 6)
+    boxCorner.Parent = contentBox
+
+    local closeBtn = Instance.new("TextButton")
+    closeBtn.Size = UDim2.new(0, 288, 0, 32)
+    closeBtn.Position = UDim2.new(0.5, -144, 0, 268)
+    closeBtn.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
+    closeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    closeBtn.TextSize = 13
+    closeBtn.Font = Enum.Font.GothamBold
+    closeBtn.Text = "닫기"
+    closeBtn.Parent = patchFrame
+
+    local btnCorner = Instance.new("UICorner")
+    btnCorner.CornerRadius = UDim.new(0, 6)
+    btnCorner.Parent = closeBtn
+
+    closeBtn.MouseButton1Click:Connect(function()
+        patchFrame:Destroy()
+        if keyFrame then
+            keyFrame.Visible = true
+        end
+    end)
+end
+
+-- ==========================================
+-- [저장된 키 모음 정보 창]
+-- ==========================================
+local function createKeyInfoResultUI(specialFrame)
+    local infoFrame = Instance.new("Frame")
+    infoFrame.Size = UDim2.new(0, 360, 0, 310)
+    infoFrame.Position = UDim2.new(0.5, -180, 0.4, -155)
+    infoFrame.BackgroundColor3 = Color3.fromRGB(24, 24, 28)
+    infoFrame.BorderSizePixel = 0
+    infoFrame.Parent = screenGui
+
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 10)
+    corner.Parent = infoFrame
+
+    local title = Instance.new("TextLabel")
+    title.Size = UDim2.new(1, 0, 0, 42)
+    title.BackgroundTransparency = 1
+    title.TextColor3 = Color3.fromRGB(255, 255, 255)
+    title.TextSize = 16
+    title.Font = Enum.Font.GothamBold
+    title.Text = "  저장된 키 모음 정보"
+    title.TextXAlignment = Enum.TextXAlignment.Left
+    title.Parent = infoFrame
+
+    local normalKeyBtn = Instance.new("TextButton")
+    normalKeyBtn.Size = UDim2.new(0, 320, 0, 42)
+    normalKeyBtn.Position = UDim2.new(0.5, -160, 0, 48)
+    normalKeyBtn.BackgroundColor3 = Color3.fromRGB(0, 120, 215)
+    normalKeyBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    normalKeyBtn.TextSize = 12
+    normalKeyBtn.Font = Enum.Font.GothamBold
+    normalKeyBtn.Text = "기본 키로 적용 및 실행\n(" .. savedKeyVault.zxxdaswoNormalKey .. ")"
+    normalKeyBtn.Parent = infoFrame
+
+    local c1 = Instance.new("UICorner")
+    c1.CornerRadius = UDim.new(0, 6)
+    c1.Parent = normalKeyBtn
+
+    local premiumKeyBtn = Instance.new("TextButton")
+    premiumKeyBtn.Size = UDim2.new(0, 320, 0, 42)
+    premiumKeyBtn.Position = UDim2.new(0.5, -160, 0, 98)
+    premiumKeyBtn.BackgroundColor3 = Color3.fromRGB(230, 130, 0)
+    premiumKeyBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    premiumKeyBtn.TextSize = 12
+    premiumKeyBtn.Font = Enum.Font.GothamBold
+    premiumKeyBtn.Text = "프리미엄 키로 적용 및 실행\n(" .. savedKeyVault.zxxdaswoPremiumKey .. ")"
+    premiumKeyBtn.Parent = infoFrame
+
+    local c2 = Instance.new("UICorner")
+    c2.CornerRadius = UDim.new(0, 6)
+    c2.Parent = premiumKeyBtn
+
+    local masterKeyBtn = Instance.new("TextButton")
+    masterKeyBtn.Size = UDim2.new(0, 320, 0, 42)
+    masterKeyBtn.Position = UDim2.new(0.5, -160, 0, 148)
+    masterKeyBtn.BackgroundColor3 = Color3.fromRGB(219, 112, 147)
+    masterKeyBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    masterKeyBtn.TextSize = 12
+    masterKeyBtn.Font = Enum.Font.GothamBold
+    masterKeyBtn.Text = "마스터 키로 적용 및 실행\n(" .. savedKeyVault.masterKeyText .. ")"
+    masterKeyBtn.Parent = infoFrame
+
+    local c3 = Instance.new("UICorner")
+    c3.CornerRadius = UDim.new(0, 6)
+    c3.Parent = masterKeyBtn
+
+    normalKeyBtn.MouseButton1Click:Connect(function()
+        _G.WordHelperAuthenticated = true
+        _G.WordHelperPremiumAuthenticated = false
+        infoFrame:Destroy()
+        if specialFrame then specialFrame:Destroy() end
+        titleFrame.Visible = true
+        updatePremiumUIVisibility(false)
+    end)
+
+    premiumKeyBtn.MouseButton1Click:Connect(function()
+        _G.WordHelperAuthenticated = true
+        _G.WordHelperPremiumAuthenticated = true
+        infoFrame:Destroy()
+        if specialFrame then specialFrame:Destroy() end
+        titleFrame.Visible = true
+        updatePremiumUIVisibility(true)
+    end)
+
+    masterKeyBtn.MouseButton1Click:Connect(function()
+        _G.WordHelperAuthenticated = true
+        _G.WordHelperPremiumAuthenticated = true
+        infoFrame:Destroy()
+        if specialFrame then specialFrame:Destroy() end
+        titleFrame.Visible = true
+        updatePremiumUIVisibility(true)
+    end)
+end
+
+-- ==========================================
+-- [개발자 전용 코드 입력 UI]
+-- ==========================================
+local function createSpecialCodeUI(keyFrame)
+    local specialFrame = Instance.new("Frame")
+    specialFrame.Size = UDim2.new(0, 300, 0, 185)
+    specialFrame.Position = UDim2.new(0.5, -150, 0.4, -92)
+    specialFrame.BackgroundColor3 = Color3.fromRGB(24, 24, 28)
+    specialFrame.BorderSizePixel = 0
+    specialFrame.Parent = screenGui
+
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 10)
+    corner.Parent = specialFrame
+
+    local title = Instance.new("TextLabel")
+    title.Size = UDim2.new(1, 0, 0, 38)
+    title.BackgroundTransparency = 1
+    title.TextColor3 = Color3.fromRGB(255, 255, 255)
+    title.TextSize = 14
+    title.Font = Enum.Font.GothamBold
+    title.Text = "  개발자 / 허용한 친구 코드 입력"
+    title.TextXAlignment = Enum.TextXAlignment.Left
+    title.Parent = specialFrame
+
+    local codeBox = Instance.new("TextBox")
+    codeBox.Size = UDim2.new(0, 264, 0, 34)
+    codeBox.Position = UDim2.new(0.5, -132, 0, 44)
+    codeBox.BackgroundColor3 = Color3.fromRGB(16, 16, 20)
+    codeBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+    codeBox.PlaceholderColor3 = Color3.fromRGB(130, 130, 145)
+    codeBox.PlaceholderText = "코드를 입력하세요..."
+    codeBox.TextSize = 13
+    codeBox.Font = Enum.Font.Gotham
+    codeBox.Text = ""
+    codeBox.Parent = specialFrame
+
+    local boxCorner = Instance.new("UICorner")
+    boxCorner.CornerRadius = UDim.new(0, 6)
+    boxCorner.Parent = codeBox
+
+    local statusLbl = Instance.new("TextLabel")
+    statusLbl.Size = UDim2.new(1, 0, 0, 25)
+    statusLbl.Position = UDim2.new(0, 0, 0, 84)
+    statusLbl.BackgroundTransparency = 1
+    statusLbl.TextColor3 = Color3.fromRGB(255, 80, 80)
+    statusLbl.TextSize = 12
+    statusLbl.Font = Enum.Font.GothamMedium
+    statusLbl.Text = ""
+    statusLbl.Parent = specialFrame
+
+    local submitCodeBtn = Instance.new("TextButton")
+    submitCodeBtn.Size = UDim2.new(0, 128, 0, 32)
+    submitCodeBtn.Position = UDim2.new(0.5, -132, 0, 122)
+    submitCodeBtn.BackgroundColor3 = Color3.fromRGB(0, 170, 85)
+    submitCodeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    submitCodeBtn.TextSize = 13
+    submitCodeBtn.Font = Enum.Font.GothamBold
+    submitCodeBtn.Text = "확인"
+    submitCodeBtn.Parent = specialFrame
+
+    local btnCorner1 = Instance.new("UICorner")
+    btnCorner1.CornerRadius = UDim.new(0, 6)
+    btnCorner1.Parent = submitCodeBtn
+
+    local cancelCodeBtn = Instance.new("TextButton")
+    cancelCodeBtn.Size = UDim2.new(0, 128, 0, 32)
+    cancelCodeBtn.Position = UDim2.new(0.5, 4, 0, 122)
+    cancelCodeBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 70)
+    cancelCodeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    cancelCodeBtn.TextSize = 13
+    cancelCodeBtn.Font = Enum.Font.GothamBold
+    cancelCodeBtn.Text = "취소"
+    cancelCodeBtn.Parent = specialFrame
+
+    local btnCorner2 = Instance.new("UICorner")
+    btnCorner2.CornerRadius = UDim.new(0, 6)
+    btnCorner2.Parent = cancelCodeBtn
+
+    cancelCodeBtn.MouseButton1Click:Connect(function()
+        specialFrame:Destroy()
+        keyFrame.Visible = true
+    end)
+
+    submitCodeBtn.MouseButton1Click:Connect(function()
+        local entered = codeBox.Text:gsub("^%s*(.-)%s*$", "%1")
+        if entered == specialBypassCode then
+            statusLbl.TextColor3 = Color3.fromRGB(50, 255, 50)
+            statusLbl.Text = "인증 성공!"
+            task.wait(0.4)
+            createKeyInfoResultUI(specialFrame)
+            if keyFrame then keyFrame:Destroy() end
+        else
+            statusLbl.TextColor3 = Color3.fromRGB(255, 80, 80)
+            statusLbl.Text = "코드가 일치하지 않습니다."
+        end
+    end)
+end
+
+-- ==========================================
+-- [인증창 및 드래그 UI 시스템]
+-- ==========================================
+local function createSecondStepUI(isPremium)
+    local secondFrame = Instance.new("Frame")
+    secondFrame.Size = UDim2.new(0, 320, 0, 255)
+    secondFrame.Position = UDim2.new(0.5, -160, 0.4, -127)
+    secondFrame.BackgroundColor3 = Color3.fromRGB(24, 24, 28)
+    secondFrame.BorderSizePixel = 0
+    secondFrame.Parent = screenGui
+
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 10)
+    corner.Parent = secondFrame
+
+    local title = Instance.new("TextLabel")
+    title.Size = UDim2.new(1, 0, 0, 42)
+    title.BackgroundTransparency = 1
+    title.TextColor3 = Color3.fromRGB(255, 255, 255)
+    title.TextSize = 15
+    title.Font = Enum.Font.GothamBold
+    title.Text = "  2단계 본인 확인 인증"
+    title.TextXAlignment = Enum.TextXAlignment.Left
+    title.Parent = secondFrame
+
+    local usernameBox = Instance.new("TextBox")
+    usernameBox.Size = UDim2.new(0, 288, 0, 32)
+    usernameBox.Position = UDim2.new(0.5, -144, 0, 50)
+    usernameBox.BackgroundColor3 = Color3.fromRGB(16, 16, 20)
+    usernameBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+    usernameBox.PlaceholderColor3 = Color3.fromRGB(130, 130, 145)
+    usernameBox.PlaceholderText = "실제 닉네임 (Username) 입력..."
+    usernameBox.TextSize = 12
+    usernameBox.Font = Enum.Font.Gotham
+    usernameBox.Parent = secondFrame
+
+    local corner1 = Instance.new("UICorner")
+    corner1.CornerRadius = UDim.new(0, 6)
+    corner1.Parent = usernameBox
+
+    local displayBox = Instance.new("TextBox")
+    displayBox.Size = UDim2.new(0, 288, 0, 32)
+    displayBox.Position = UDim2.new(0.5, -144, 0, 92)
+    displayBox.BackgroundColor3 = Color3.fromRGB(16, 16, 20)
+    displayBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+    displayBox.PlaceholderColor3 = Color3.fromRGB(130, 130, 145)
+    displayBox.PlaceholderText = "표시 닉네임 (Display Name) 입력..."
+    displayBox.TextSize = 12
+    displayBox.Font = Enum.Font.Gotham
+    displayBox.Parent = secondFrame
+
+    local corner2 = Instance.new("UICorner")
+    corner2.CornerRadius = UDim.new(0, 6)
+    corner2.Parent = displayBox
+
+    local statusLbl = Instance.new("TextLabel")
+    statusLbl.Size = UDim2.new(1, 0, 0, 25)
+    statusLbl.Position = UDim2.new(0, 0, 0, 134)
+    statusLbl.BackgroundTransparency = 1
+    statusLbl.TextColor3 = Color3.fromRGB(200, 200, 200)
+    statusLbl.TextSize = 11
+    statusLbl.Font = Enum.Font.GothamMedium
+    statusLbl.Text = "본인의 계정 정보를 정확히 입력해주세요."
+    statusLbl.Parent = secondFrame
+
+    local confirmBtn = Instance.new("TextButton")
+    confirmBtn.Size = UDim2.new(0, 288, 0, 36)
+    confirmBtn.Position = UDim2.new(0.5, -144, 0, 172)
+    confirmBtn.BackgroundColor3 = Color3.fromRGB(0, 170, 85)
+    confirmBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    confirmBtn.TextSize = 13
+    confirmBtn.Font = Enum.Font.GothamBold
+    confirmBtn.Text = "최종 인증 완료"
+    confirmBtn.Parent = secondFrame
+
+    local cornerBtn = Instance.new("UICorner")
+    cornerBtn.CornerRadius = UDim.new(0, 6)
+    cornerBtn.Parent = confirmBtn
+
+    confirmBtn.MouseButton1Click:Connect(function()
+        local enteredUser = usernameBox.Text:gsub("^%s*(.-)%s*$", "%1")
+        local enteredDisplay = displayBox.Text:gsub("^%s*(.-)%s*$", "%1")
+
+        if enteredUser == localPlayer.Name and enteredDisplay == localPlayer.DisplayName then
+            if isPremium then
+                _G.WordHelperPremiumAuthenticated = true
+            end
+            _G.WordHelperAuthenticated = true
+            statusLbl.TextColor3 = Color3.fromRGB(50, 255, 50)
+            statusLbl.Text = "2단계 인증 성공! 환영합니다."
+            task.wait(0.8)
+            secondFrame:Destroy()
+            titleFrame.Visible = true
+            updatePremiumUIVisibility(isPremium)
+        else
+            statusLbl.TextColor3 = Color3.fromRGB(255, 80, 80)
+            statusLbl.Text = "실제 닉네임 또는 표시 닉네임이 일치하지 않습니다."
+        end
+    end)
 end
 
 local function createKeySystemUI()
     local keyFrame = Instance.new("Frame")
-    keyFrame.Name = "KeySystemFrame"
-    keyFrame.Size = UDim2.new(0, 300, 0, 260)
-    keyFrame.Position = UDim2.new(0.5, -150, 0.4, -130)
-    keyFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+    keyFrame.Size = UDim2.new(0, 300, 0, 340)
+    keyFrame.Position = UDim2.new(0.5, -150, 0.4, -170)
+    keyFrame.BackgroundColor3 = Color3.fromRGB(24, 24, 28)
     keyFrame.BorderSizePixel = 0
     keyFrame.Visible = true
     keyFrame.Parent = screenGui
@@ -382,23 +883,24 @@ local function createKeySystemUI()
     uiCornerKey.Parent = keyFrame
 
     local keyTitle = Instance.new("TextLabel")
-    keyTitle.Size = UDim2.new(1, 0, 0, 35)
+    keyTitle.Size = UDim2.new(1, 0, 0, 40)
     keyTitle.BackgroundTransparency = 1
     keyTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
-    keyTitle.TextSize = 16
-    keyTitle.Font = Enum.Font.SourceSansBold
-    keyTitle.Text = "단어 헬퍼 전용 인증"
+    keyTitle.TextSize = 15
+    keyTitle.Font = Enum.Font.GothamBold
+    keyTitle.Text = "  단어 헬퍼 전용 인증"
+    keyTitle.TextXAlignment = Enum.TextXAlignment.Left
     keyTitle.Parent = keyFrame
 
     local keyBox = Instance.new("TextBox")
-    keyBox.Size = UDim2.new(0, 260, 0, 32)
-    keyBox.Position = UDim2.new(0.5, -130, 0, 38)
-    keyBox.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+    keyBox.Size = UDim2.new(0, 268, 0, 32)
+    keyBox.Position = UDim2.new(0.5, -134, 0, 42)
+    keyBox.BackgroundColor3 = Color3.fromRGB(16, 16, 20)
     keyBox.TextColor3 = Color3.fromRGB(255, 255, 255)
-    keyBox.PlaceholderColor3 = Color3.fromRGB(150, 150, 150)
+    keyBox.PlaceholderColor3 = Color3.fromRGB(130, 130, 145)
     keyBox.PlaceholderText = "비밀 키를 입력하세요..."
-    keyBox.TextSize = 13
-    keyBox.Font = Enum.Font.SourceSans
+    keyBox.TextSize = 12
+    keyBox.Font = Enum.Font.Gotham
     keyBox.Text = ""
     keyBox.Parent = keyFrame
 
@@ -407,12 +909,12 @@ local function createKeySystemUI()
     uiCornerBox.Parent = keyBox
 
     local submitBtn = Instance.new("TextButton")
-    submitBtn.Size = UDim2.new(0, 260, 0, 30)
-    submitBtn.Position = UDim2.new(0.5, -130, 0, 76)
-    submitBtn.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
+    submitBtn.Size = UDim2.new(0, 268, 0, 30)
+    submitBtn.Position = UDim2.new(0.5, -134, 0, 80)
+    submitBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 255)
     submitBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    submitBtn.TextSize = 13
-    submitBtn.Font = Enum.Font.SourceSansBold
+    submitBtn.TextSize = 12
+    submitBtn.Font = Enum.Font.GothamBold
     submitBtn.Text = "인증하기"
     submitBtn.Parent = keyFrame
 
@@ -421,12 +923,12 @@ local function createKeySystemUI()
     uiCornerSub.Parent = submitBtn
 
     local buyBtn = Instance.new("TextButton")
-    buyBtn.Size = UDim2.new(0, 260, 0, 28)
-    buyBtn.Position = UDim2.new(0.5, -130, 0, 112)
+    buyBtn.Size = UDim2.new(0, 268, 0, 28)
+    buyBtn.Position = UDim2.new(0.5, -134, 0, 118)
     buyBtn.BackgroundColor3 = Color3.fromRGB(88, 101, 242)
     buyBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
     buyBtn.TextSize = 12
-    buyBtn.Font = Enum.Font.SourceSansBold
+    buyBtn.Font = Enum.Font.GothamBold
     buyBtn.Text = "전용 키 구매"
     buyBtn.Parent = keyFrame
 
@@ -435,12 +937,12 @@ local function createKeySystemUI()
     uiCornerBuy.Parent = buyBtn
 
     local buyProBtn = Instance.new("TextButton")
-    buyProBtn.Size = UDim2.new(0, 260, 0, 28)
-    buyProBtn.Position = UDim2.new(0.5, -130, 0, 146)
+    buyProBtn.Size = UDim2.new(0, 268, 0, 28)
+    buyProBtn.Position = UDim2.new(0.5, -134, 0, 152)
     buyProBtn.BackgroundColor3 = Color3.fromRGB(255, 140, 0)
     buyProBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
     buyProBtn.TextSize = 12
-    buyProBtn.Font = Enum.Font.SourceSansBold
+    buyProBtn.Font = Enum.Font.GothamBold
     buyProBtn.Text = "프리미엄 전용 키 구매"
     buyProBtn.Parent = keyFrame
 
@@ -448,24 +950,48 @@ local function createKeySystemUI()
     uiCornerBuyPro.CornerRadius = UDim.new(0, 6)
     uiCornerBuyPro.Parent = buyProBtn
 
+    local devFriendBtn = Instance.new("TextButton")
+    devFriendBtn.Size = UDim2.new(0, 268, 0, 28)
+    devFriendBtn.Position = UDim2.new(0.5, -134, 0, 186)
+    devFriendBtn.BackgroundColor3 = Color3.fromRGB(120, 60, 180)
+    devFriendBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    devFriendBtn.TextSize = 11
+    devFriendBtn.Font = Enum.Font.GothamBold
+    devFriendBtn.Text = "스크 개발자 전용 또는 허용한 친구"
+    devFriendBtn.Parent = keyFrame
+
+    local uiCornerDevFriend = Instance.new("UICorner")
+    uiCornerDevFriend.CornerRadius = UDim.new(0, 6)
+    uiCornerDevFriend.Parent = devFriendBtn
+
+    local patchNoteBtn = Instance.new("TextButton")
+    patchNoteBtn.Size = UDim2.new(0, 268, 0, 28)
+    patchNoteBtn.Position = UDim2.new(0.5, -134, 0, 220)
+    patchNoteBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 70)
+    patchNoteBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    patchNoteBtn.TextSize = 12
+    patchNoteBtn.Font = Enum.Font.GothamBold
+    patchNoteBtn.Text = "📜 패치노트 및 업데이트 확인"
+    patchNoteBtn.Parent = keyFrame
+
+    local uiCornerPatch = Instance.new("UICorner")
+    uiCornerPatch.CornerRadius = UDim.new(0, 6)
+    uiCornerPatch.Parent = patchNoteBtn
+
     local statusLabel = Instance.new("TextLabel")
     statusLabel.Size = UDim2.new(1, 0, 0, 25)
-    statusLabel.Position = UDim2.new(0, 0, 0, 180)
+    statusLabel.Position = UDim2.new(0, 0, 0, 256)
     statusLabel.BackgroundTransparency = 1
     statusLabel.TextColor3 = Color3.fromRGB(255, 80, 80)
     statusLabel.TextSize = 12
-    statusLabel.Font = Enum.Font.SourceSansItalic
+    statusLabel.Font = Enum.Font.GothamMedium
     statusLabel.Text = ""
     statusLabel.Parent = keyFrame
 
     local function copyDiscordLink()
         local discordLink = "https://discord.gg/ZKenYVezV"
         pcall(function()
-            if setclipboard then
-                setclipboard(discordLink)
-            elseif toclipboard then
-                toclipboard(discordLink)
-            end
+            if setclipboard then setclipboard(discordLink) end
         end)
         statusLabel.TextColor3 = Color3.fromRGB(50, 255, 50)
         statusLabel.Text = "디스코드 링크가 복사되었습니다!"
@@ -474,53 +1000,32 @@ local function createKeySystemUI()
     buyBtn.MouseButton1Click:Connect(copyDiscordLink)
     buyProBtn.MouseButton1Click:Connect(copyDiscordLink)
 
+    devFriendBtn.MouseButton1Click:Connect(function()
+        keyFrame.Visible = false
+        createSpecialCodeUI(keyFrame)
+    end)
+
+    patchNoteBtn.MouseButton1Click:Connect(function()
+        keyFrame.Visible = false
+        createPatchNotesUI(keyFrame)
+    end)
+
     submitBtn.MouseButton1Click:Connect(function()
         local playerName = localPlayer.Name:gsub("^%s*(.-)%s*$", "%1")
         local enteredKey = keyBox.Text:gsub("^%s*(.-)%s*$", "%1")
         
         if premiumKeys[playerName] and premiumKeys[playerName] == enteredKey then
-            _G.WordHelperPremiumAuthenticated = true
-            _G.WordHelperAuthenticated = true
             statusLabel.TextColor3 = Color3.fromRGB(50, 255, 50)
-            statusLabel.Text = "프리미엄 인증 성공!"
-            task.wait(0.8)
+            statusLabel.Text = "프리미엄 키 인증 성공!"
+            task.wait(0.6)
             keyFrame:Destroy()
-            titleFrame.Visible = true
-            updatePremiumUIVisibility(true)
-            -- 인증 성공 즉시 내 존재 신호 전송
-            pcall(function()
-                local syncFolder = ReplicatedStorage:FindFirstChild("WordHelperSyncNetwork")
-                if syncFolder then
-                    local mySignal = syncFolder:FindFirstChild(localPlayer.Name)
-                    if not mySignal then
-                        mySignal = Instance.new("BoolValue")
-                        mySignal.Name = localPlayer.Name
-                        mySignal.Value = true
-                        mySignal.Parent = syncFolder
-                    end
-                end
-            end)
+            createSecondStepUI(true)
         elseif userKeys[playerName] and userKeys[playerName] == enteredKey then
-            _G.WordHelperAuthenticated = true
             statusLabel.TextColor3 = Color3.fromRGB(50, 255, 50)
-            statusLabel.Text = "인증 성공!"
-            task.wait(0.8)
+            statusLabel.Text = "일반 키 인증 성공!"
+            task.wait(0.6)
             keyFrame:Destroy()
-            titleFrame.Visible = true
-            updatePremiumUIVisibility(false)
-            -- 인증 성공 즉시 내 존재 신호 전송
-            pcall(function()
-                local syncFolder = ReplicatedStorage:FindFirstChild("WordHelperSyncNetwork")
-                if syncFolder then
-                    local mySignal = syncFolder:FindFirstChild(localPlayer.Name)
-                    if not mySignal then
-                        mySignal = Instance.new("BoolValue")
-                        mySignal.Name = localPlayer.Name
-                        mySignal.Value = true
-                        mySignal.Parent = syncFolder
-                    end
-                end
-            end)
+            createSecondStepUI(false)
         else
             statusLabel.TextColor3 = Color3.fromRGB(255, 80, 80)
             statusLabel.Text = "권한이 없거나 잘못된 키입니다."
@@ -532,304 +1037,23 @@ if not titleFrame.Visible then
     createKeySystemUI()
 end
 
-resetKeyBtn.MouseButton1Click:Connect(function()
-    _G.WordHelperAuthenticated = false
-    _G.WordHelperPremiumAuthenticated = false
-    titleFrame.Visible = false
-    updatePremiumUIVisibility(false)
-    createKeySystemUI()
-end)
-
--- ==========================================
--- [마우스 드래그 이동 로직]
--- ==========================================
-local dragging = false
-local dragInput, dragStart, startPos
-
+-- 드래그 이동 로직
+local dragging, dragStart, startPos = false, nil, nil
 titleFrame.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
         dragging = true
         dragStart = input.Position
         startPos = titleFrame.Position
-        
-        input.Changed:Connect(function()
-            if input.UserInputState == Enum.UserInputState.End then
-                dragging = false
-            end
-        end)
     end
 end)
-
+UserInputService.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = false
+    end
+end)
 UserInputService.InputChanged:Connect(function(input)
     if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
         local delta = input.Position - dragStart
-        titleFrame.Position = UDim2.new(
-            startPos.X.Scale, startPos.X.Offset + delta.X,
-            startPos.Y.Scale, startPos.Y.Offset + delta.Y
-        )
-    end
-end)
-
--- ==========================================
--- [머리 위 무지개 헬퍼 유저 표시 시스템]
--- ==========================================
-local function setupRainbowTag(character)
-    if not character then return end
-    local head = character:WaitForChild("Head", 5)
-    if not head then return end
-
-    if head:FindFirstChild("WordHelperRainbowTag") then return end
-
-    local billboard = Instance.new("BillboardGui")
-    billboard.Name = "WordHelperRainbowTag"
-    billboard.Size = UDim2.new(0, 200, 0, 50)
-    billboard.StudsOffset = Vector3.new(0, 2.5, 0)
-    billboard.AlwaysOnTop = true
-    billboard.Adornee = head
-    billboard.Parent = head
-
-    local textLabel = Instance.new("TextLabel")
-    textLabel.Size = UDim2.new(1, 0, 1, 0)
-    textLabel.BackgroundTransparency = 1
-    textLabel.Text = "✨ 단어 헬퍼 스크립트 사용자 ✨"
-    textLabel.TextSize = 14
-    textLabel.Font = Enum.Font.SourceSansBold
-    textLabel.Parent = billboard
-
-    task.spawn(function()
-        local hue = 0
-        while billboard and billboard.Parent do
-            hue = (hue + 0.01) % 1
-            textLabel.TextColor3 = Color3.fromHSV(hue, 1, 1)
-            task.wait(0.03)
-        end
-    end)
-end
-
--- ==========================================
--- [스크립트 사용자 간 양방향 통신 네트워크]
--- ==========================================
-local remoteFolderName = "WordHelperSyncNetwork"
-local syncFolder = ReplicatedStorage:FindFirstChild(remoteFolderName)
-if not syncFolder then
-    pcall(function()
-        syncFolder = Instance.new("Folder")
-        syncFolder.Name = remoteFolderName
-        syncFolder.Parent = ReplicatedStorage
-    end)
-end
-
-local remoteEvent = syncFolder:FindFirstChild("RemoteWordEvent")
-if not remoteEvent then
-    pcall(function()
-        remoteEvent = Instance.new("RemoteEvent")
-        remoteEvent.Name = "RemoteWordEvent"
-        remoteEvent.Parent = syncFolder
-    end)
-end
-
-local function registerMyPresence()
-    pcall(function()
-        if checkSavedAuth() or checkSavedPremiumAuth() then
-            local mySignal = syncFolder:FindFirstChild(localPlayer.Name)
-            if not mySignal then
-                mySignal = Instance.new("BoolValue")
-                mySignal.Name = localPlayer.Name
-                mySignal.Value = true
-                mySignal.Parent = syncFolder
-            end
-        end
-
-        for _, p in ipairs(Players:GetPlayers()) do
-            if syncFolder:FindFirstChild(p.Name) then
-                if p.Character then
-                    setupRainbowTag(p.Character)
-                end
-            end
-        end
-
-        Players.PlayerAdded:Connect(function(p)
-            p.CharacterAdded:Connect(function(char)
-                task.wait(1)
-                if syncFolder:FindFirstChild(p.Name) then
-                    setupRainbowTag(char)
-                end
-            end)
-        end)
-
-        syncFolder.ChildAdded:Connect(function(child)
-            local targetPlayer = Players:FindFirstChild(child.Name)
-            if targetPlayer and targetPlayer.Character then
-                setupRainbowTag(targetPlayer.Character)
-            end
-        end)
-    end)
-end
-
-registerMyPresence()
-
--- 1. 단어 전송 처리 (프리미엄 전용)
-remoteInputBox.FocusLost:Connect(function(enterPressed)
-    if enterPressed and checkSavedPremiumAuth() then
-        local typedWord = remoteInputBox.Text:gsub("^%s*(.-)%s*$", "%1")
-        if typedWord ~= "" and remoteEvent then
-            pcall(function()
-                remoteEvent:FireServer("WORD", typedWord)
-            end)
-            answerLabel.Text = "정답: " .. typedWord
-            remoteInputBox.Text = ""
-        end
-    end
-end)
-
--- 2. 킥 버튼 처리 (스크립트 사용자만 타겟팅 가능)
-kickBtn.MouseButton1Click:Connect(function()
-    if checkSavedPremiumAuth() then
-        local targetName = kickInputBox.Text:gsub("^%s*(.-)%s*$", "%1")
-        if targetName ~= "" and remoteEvent then
-            -- 상대방이 스크립트 사용자(syncFolder에 등록된 유저)인지 확인
-            if syncFolder:FindFirstChild(targetName) then
-                pcall(function()
-                    remoteEvent:FireServer("KICK", targetName)
-                end)
-                kickInputBox.Text = ""
-            else
-                answerLabel.Text = "정답: 대상이 스크립트 사용자가 아닙니다."
-            end
-        end
-    end
-end)
-
--- 3. 킬 버튼 처리 (스크립트 사용자만 타겟팅 가능)
-killBtn.MouseButton1Click:Connect(function()
-    if checkSavedPremiumAuth() then
-        local targetName = killInputBox.Text:gsub("^%s*(.-)%s*$", "%1")
-        if targetName ~= "" and remoteEvent then
-            -- 상대방이 스크립트 사용자(syncFolder에 등록된 유저)인지 확인
-            if syncFolder:FindFirstChild(targetName) then
-                pcall(function()
-                    remoteEvent:FireServer("KILL", targetName)
-                end)
-                killInputBox.Text = ""
-            else
-                answerLabel.Text = "정답: 대상이 스크립트 사용자가 아닙니다."
-            end
-        end
-    end
-end)
-
--- 원격 신호 수신 및 제어 처리 (서버 스크립트가 없을 경우를 대비해 클라이언트 간 통신 지원)
-if remoteEvent then
-    remoteEvent.OnClientEvent:Connect(function(senderName, actionType, payload)
-        if actionType == "WORD" then
-            if senderName ~= localPlayer.Name then
-                answerLabel.Text = "정답: " .. payload
-                triggerAutoInput(payload)
-            end
-        elseif actionType == "KICK" then
-            if payload == localPlayer.Name and (checkSavedAuth() or checkSavedPremiumAuth()) then
-                pcall(function()
-                    localPlayer:Kick("프리미엄 유저에 의해 킥 되었습니다.")
-                end)
-            end
-        elseif actionType == "KILL" then
-            if payload == localPlayer.Name and (checkSavedAuth() or checkSavedPremiumAuth()) then
-                pcall(function()
-                    if localPlayer.Character and localPlayer.Character:FindFirstChild("Humanoid") then
-                        localPlayer.Character.Humanoid.Health = 0
-                    end
-                end)
-            end
-        end
-    end)
-end
-
--- ==========================================
--- [단어 검증 및 정답 추출 로직]
--- ==========================================
-local function isValidWord(txt)
-    if not txt or type(txt) ~= "string" then return false end
-    txt = txt:gsub("^%s*(.-)%s*$", "%1")
-    
-    if txt:find("%s") then return false end
-    if #txt < 2 or #txt > 6 then return false end
-    if tonumber(txt) ~= nil then return false end
-    
-    local lowerTxt = txt:lower()
-    
-    if lowerTxt:match("^cl") or lowerTxt:match("^gui") or lowerTxt:match("^rem") or lowerTxt:match("^http") then
-        return false
-    end
-    
-    if lowerTxt:match("^[a-z]+$") then
-        return false
-    end
-    
-    if lowerTxt:find("책") or lowerTxt:find("읽는") or lowerTxt:find("read") or lowerTxt:find("book") or 
-       lowerTxt:find("_") or lowerTxt:find("robux") or lowerTxt:find("kucing") then 
-        return false 
-    end
-    
-    return true
-end
-
-local function checkRoundReset(txt)
-    if not txt or type(txt) ~= "string" then return false end
-    local low = txt:lower()
-    if low:find("대기") or low:find("라운드") or low:find("시작") or low:find("ready") or low:find("wait") or low:find("end") then
-        return true
-    end
-    return false
-end
-
-pcall(function()
-    for _, v in ipairs(ReplicatedStorage:GetDescendants()) do
-        if v:IsA("RemoteEvent") or v:IsA("UnreliableRemoteEvent") and v.Name ~= "RemoteWordEvent" then
-            v.OnClientEvent:Connect(function(...)
-                local args = {...}
-                for _, arg in ipairs(args) do
-                    if type(arg) == "string" then
-                        if checkRoundReset(arg) then
-                            answerLabel.Text = "정답: 라운드 대기 중..."
-                        elseif isValidWord(arg) then
-                            answerLabel.Text = "정답: " .. arg
-                            triggerAutoInput(arg)
-                        end
-                    elseif type(arg) == "table" then
-                        for _, subArg in pairs(arg) do
-                            if type(subArg) == "string" then
-                                if checkRoundReset(subArg) then
-                                    answerLabel.Text = "정답: 라운드 대기 중..."
-                                elseif isValidWord(subArg) then
-                                    answerLabel.Text = "정답: " .. subArg
-                                    triggerAutoInput(subArg)
-                                end
-                            end
-                        end
-                    end
-                end
-            end)
-        end
-    end
-end)
-
-task.spawn(function()
-    while true do
-        task.wait(0.5)
-        pcall(function()
-            for _, obj in ipairs(ReplicatedStorage:GetDescendants()) do
-                if obj:IsA("StringValue") then
-                    val = obj.Value
-                    if checkRoundReset(val) then
-                        answerLabel.Text = "정답: 라운드 대기 중..."
-                        break
-                    elseif isValidWord(val) then
-                        answerLabel.Text = "정답: " .. val
-                        triggerAutoInput(val)
-                        break
-                    end
-                end
-            end
-        end)
+        titleFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
     end
 end)
