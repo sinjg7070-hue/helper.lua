@@ -1,5 +1,5 @@
 -- ==========================================
--- [단어 맞히기 헬퍼 - 9시 만료 시간제 프리미엄 통합 버전]
+-- [단어 맞히기 헬퍼 - 패치노트 키 숨김 보안 버전]
 -- ==========================================
 local CoreGui = game:GetService("CoreGui")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -47,7 +47,6 @@ end
 -- ==========================================
 local specialBypassCode = "지환존잘7011"
 
--- 타임스탬프 계산 헬퍼 함수
 local function getTimeStamp(year, month, day, hour, min, sec)
     return os.time({year = year, month = month, day = day, hour = hour or 0, min = min or 0, sec = sec or 0})
 end
@@ -59,14 +58,17 @@ local savedKeyVault = {
     dohunpoopPremiumKey = "dohunpoop.key.prap",
     _5ee566PremiumKey = "5ee566.key.pro.p",
     jihooNormalKey = "bbalpwla_key",
-    timedProKey = "timed_pro_8pm", -- 시간제 프리미엄 키
+    timedProKey = "timed_pro_8pm",
     masterKeyText = "MASTER_KEY_2026"
 }
 
--- 시간제 프리미엄 키의 만료 시각 지정 (2026년 9월 27일 21시 00분 00초 = 밤 9시)
+-- 2026년 9월 27일 21시 00분 00초 (밤 9시) 만료 설정
 local timedPremiumExpiryMap = {
     [savedKeyVault.timedProKey] = getTimeStamp(2026, 9, 27, 21, 0, 0)
 }
+
+-- 시간제 키가 만료되었거나 소모되었는지 여부를 관리하는 전역/상태 변수
+_G.WordHelperTimedKeyExhausted = _G.WordHelperTimedKeyExhausted or false
 
 local userKeys = {
     ["dambii522"] = "no.1keyap191929",
@@ -79,7 +81,7 @@ local userKeys = {
 }
 
 local premiumKeys = {
-    ["zxxdaswo"] = savedKeyVault.zxxdaswoPermanentKey or savedKeyVault.zxxdaswoPremiumKey,
+    ["zxxdaswo"] = savedKeyVault.zxxdaswoPremiumKey,
     ["1CasaNova6974"] = savedKeyVault.casaNovaPremiumKey,
     ["dohunpoop"] = savedKeyVault.dohunpoopPremiumKey,
     ["5ee566"] = savedKeyVault._5ee566PremiumKey,
@@ -90,12 +92,16 @@ _G.WordHelperAuthenticated = _G.WordHelperAuthenticated or false
 _G.WordHelperPremiumAuthenticated = _G.WordHelperPremiumAuthenticated or false
 _G.WordHelperActiveKey = _G.WordHelperActiveKey or nil
 
--- 시간제 키 만료 여부를 검사하는 함수
+-- 전방 선언 (함수 순서 맞춤용)
+local createKeySystemUI
+
+-- 시간제 키 만료 검사 함수
 local function checkTimedKeyExpiration()
-    if _G.WordHelperActiveKey and timedPremiumExpiryMap[_G.WordHelperActiveKey] then
-        if os.time() > timedPremiumExpiryMap[_G.WordHelperActiveKey] then
-            -- 만료됨 -> 프리미엄 권한 박탈 및 일반 모드로 강제 전환
+    if _G.WordHelperActiveKey == savedKeyVault.timedProKey then
+        if _G.WordHelperTimedKeyExhausted or os.time() > timedPremiumExpiryMap[savedKeyVault.timedProKey] then
+            _G.WordHelperTimedKeyExhausted = true
             _G.WordHelperPremiumAuthenticated = false
+            _G.WordHelperAuthenticated = false
             _G.WordHelperActiveKey = nil
             return false
         end
@@ -116,7 +122,7 @@ end
 -- ==========================================
 local titleFrame = Instance.new("TextButton")
 titleFrame.Name = "TitleFrame"
-titleFrame.Size = UDim2.new(0, 248, 0, 185)
+titleFrame.Size = UDim2.new(0, 248, 0, 210)
 titleFrame.Position = UDim2.new(0.73, 0, 0.1, 0)
 titleFrame.BackgroundColor3 = Color3.fromRGB(24, 24, 28)
 titleFrame.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -141,21 +147,35 @@ topBarAccent.Parent = titleFrame
 
 local devLabel = Instance.new("TextLabel")
 devLabel.Name = "DevLabel"
-devLabel.Size = UDim2.new(1, 0, 0, 20)
+devLabel.Size = UDim2.new(1, 0, 0, 18)
 devLabel.Position = UDim2.new(0, 0, 0, 26)
 devLabel.BackgroundTransparency = 1
 devLabel.TextColor3 = Color3.fromRGB(160, 165, 180)
-devLabel.TextSize = 12
+devLabel.TextSize = 11
 devLabel.Font = Enum.Font.GothamMedium
 devLabel.Text = "  스크립트 개발자 : 지환"
 devLabel.TextXAlignment = Enum.TextXAlignment.Left
 devLabel.Parent = titleFrame
 
+-- [시간제 타이머 표시 라벨]
+local timerLabel = Instance.new("TextLabel")
+timerLabel.Name = "TimerLabel"
+timerLabel.Size = UDim2.new(1, 0, 0, 18)
+timerLabel.Position = UDim2.new(0, 0, 0, 44)
+timerLabel.BackgroundTransparency = 1
+timerLabel.TextColor3 = Color3.fromRGB(255, 170, 0)
+timerLabel.TextSize = 11
+timerLabel.Font = Enum.Font.GothamBold
+timerLabel.Text = "  [시간제 프리미엄] 남은 시간 계산 중..."
+timerLabel.TextXAlignment = Enum.TextXAlignment.Left
+timerLabel.Visible = (_G.WordHelperActiveKey == savedKeyVault.timedProKey)
+timerLabel.Parent = titleFrame
+
 -- [정답 표시창]
 local answerLabel = Instance.new("TextLabel")
 answerLabel.Name = "AnswerLabel"
 answerLabel.Size = UDim2.new(0, 232, 0, 42)
-answerLabel.Position = UDim2.new(0.5, -116, 0, 52)
+answerLabel.Position = UDim2.new(0.5, -116, 0, 68)
 answerLabel.BackgroundColor3 = Color3.fromRGB(16, 16, 20)
 answerLabel.TextColor3 = Color3.fromRGB(0, 255, 130)
 answerLabel.TextSize = 15
@@ -172,7 +192,7 @@ local autoAnswerEnabled = false
 local autoBtn = Instance.new("TextButton")
 autoBtn.Name = "AutoAnswerButton"
 autoBtn.Size = UDim2.new(0, 232, 0, 26)
-autoBtn.Position = UDim2.new(0.5, -116, 0, 98)
+autoBtn.Position = UDim2.new(0.5, -116, 0, 114)
 autoBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
 autoBtn.TextColor3 = Color3.fromRGB(220, 220, 220)
 autoBtn.TextSize = 12
@@ -202,7 +222,7 @@ end)
 local delayBox = Instance.new("TextBox")
 delayBox.Name = "DelayBox"
 delayBox.Size = UDim2.new(0, 232, 0, 26)
-delayBox.Position = UDim2.new(0.5, -116, 0, 128)
+delayBox.Position = UDim2.new(0.5, -116, 0, 144)
 delayBox.BackgroundColor3 = Color3.fromRGB(35, 35, 42)
 delayBox.TextColor3 = Color3.fromRGB(255, 255, 255)
 delayBox.PlaceholderColor3 = Color3.fromRGB(130, 130, 145)
@@ -222,7 +242,7 @@ local autoAfkEnabled = false
 local afkBtn = Instance.new("TextButton")
 afkBtn.Name = "AutoAfkButton"
 afkBtn.Size = UDim2.new(0, 232, 0, 26)
-afkBtn.Position = UDim2.new(0.5, -116, 0, 158)
+afkBtn.Position = UDim2.new(0.5, -116, 0, 174)
 afkBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
 afkBtn.TextColor3 = Color3.fromRGB(220, 220, 220)
 afkBtn.TextSize = 12
@@ -248,10 +268,31 @@ afkBtn.MouseButton1Click:Connect(function()
     end
 end)
 
--- 주기적으로 시간제 키 만료 상태 체크 루프
+-- 주기적으로 시간제 키 만료 및 타이머 상태 체크 루프
 task.spawn(function()
     while true do
         task.wait(1)
+        local isTimed = (_G.WordHelperActiveKey == savedKeyVault.timedProKey)
+        timerLabel.Visible = isTimed
+
+        if isTimed then
+            local expiryTime = timedPremiumExpiryMap[savedKeyVault.timedProKey] or 0
+            local remainSec = expiryTime - os.time()
+            if remainSec <= 0 or _G.WordHelperTimedKeyExhausted then
+                _G.WordHelperTimedKeyExhausted = true
+                _G.WordHelperAuthenticated = false
+                _G.WordHelperPremiumAuthenticated = false
+                _G.WordHelperActiveKey = nil
+                titleFrame.Visible = false
+                createKeySystemUI()
+                break
+            else
+                local mm = math.floor(remainSec / 60)
+                local ss = remainSec % 60
+                timerLabel.Text = string.format("  남은 시간: %02d분 %02d초 (만료)", mm, ss)
+            end
+        end
+
         local isPrem = checkSavedPremiumAuthenticated()
         autoBtn.Visible = isPrem
         delayBox.Visible = isPrem
@@ -283,6 +324,7 @@ local function updatePremiumUIVisibility(isVisible)
     autoBtn.Visible = isVisible
     delayBox.Visible = isVisible
     afkBtn.Visible = isVisible
+    timerLabel.Visible = (_G.WordHelperActiveKey == savedKeyVault.timedProKey)
 end
 
 -- ==========================================
@@ -407,7 +449,7 @@ end)
 -- ==========================================
 -- [자동 정답 입력 및 정답 처리 로직]
 -- ==========================================
-function triggerAutoInput(word)
+local function triggerAutoInput(word)
     if not checkSavedPremiumAuthenticated() or not autoAnswerEnabled then return end
     pcall(function()
         local delayVal = tonumber(delayBox.Text) or 0
@@ -499,7 +541,7 @@ local function processValue(txt)
     elseif isValidWord(txt) then
         if txt ~= currentAnswer then
             currentAnswer = txt
-            answerLabel.Text = "정답: " .. txt
+            answerLabel.Text = "정답: " + txt
             triggerAutoInput(txt)
         end
     end
@@ -581,14 +623,10 @@ local function createPatchNotesUI(keyFrame)
     contentBox.TextYAlignment = Enum.TextYAlignment.Top
     contentBox.TextWrapped = true
     contentBox.Text = [[
-[ v1.8 업데이트 내역 ]
-• 시간제 프리미엄 키(timed_pro_8pm) 시스템 도입
-• 만료 시각을 밤 9시(21:00)까지로 연장 적용
-• 지정된 만료 시간 도달 시 자동으로 권한 회수 및 일반 모드 전환 기능 탑재
-
-[ v1.7 업데이트 내역 ]
-• 톱니바퀴 설정창 오픈 시 메인 UI 자동 숨김 처리
-• 설정창 닫기 시 메인 UI 자동 복구 기능 탑재
+[ v1.9 업데이트 내역 ]
+• 이벤트 전용 시간제 프리미엄 패스 지원 기능 추가
+• 메인 GUI 내 실시간 만료 타이머 표시 바 탑재
+• 만료 시 메인 창 자동 닫힘 및 일회용 키 보안 차단 시스템 적용 완료
 ]]
     contentBox.Parent = patchFrame
 
@@ -911,8 +949,9 @@ local function createSecondStepUI(isPremium, usedKey)
     end)
 end
 
-local function createKeySystemUI()
+createKeySystemUI = function()
     local keyFrame = Instance.new("Frame")
+    keyFrame.Name = "KeySystemFrame"
     keyFrame.Size = UDim2.new(0, 300, 0, 340)
     keyFrame.Position = UDim2.new(0.5, -150, 0.4, -170)
     keyFrame.BackgroundColor3 = Color3.fromRGB(24, 24, 28)
@@ -1058,16 +1097,24 @@ local function createKeySystemUI()
         
         -- 1. 시간제 프리미엄 키 검사
         if enteredKey == savedKeyVault.timedProKey then
-            if os.time() > timedPremiumExpiryMap[savedKeyVault.timedProKey] then
+            if _G.WordHelperTimedKeyExhausted or os.time() > timedPremiumExpiryMap[savedKeyVault.timedProKey] then
+                _G.WordHelperTimedKeyExhausted = true
                 statusLabel.TextColor3 = Color3.fromRGB(255, 80, 80)
-                statusLabel.Text = "만료된 시간제 프리미엄 키입니다."
+                statusLabel.Text = "만료되었거나 이미 사용된 시간제 키입니다."
                 return
             end
             statusLabel.TextColor3 = Color3.fromRGB(50, 255, 50)
-            statusLabel.Text = "시간제 프리미엄 키 인증 성공!"
+            statusLabel.Text = "시간제 프리미엄 키 인증 성공! (2단계 생략)"
             task.wait(0.6)
+            
+            -- 2단계 인증 즉시 자동 통과 및 메인창 오픈
+            _G.WordHelperAuthenticated = true
+            _G.WordHelperPremiumAuthenticated = true
+            _G.WordHelperActiveKey = enteredKey
+            
             keyFrame:Destroy()
-            createSecondStepUI(true, enteredKey)
+            titleFrame.Visible = true
+            updatePremiumUIVisibility(true)
 
         -- 2. 일반 프리미엄 키 검사
         elseif premiumKeys[playerName] and premiumKeys[playerName] == enteredKey then
