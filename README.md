@@ -1,5 +1,5 @@
 -- ==========================================
--- [단어 맞히기 헬퍼 - UI 디자인 고도화 및 창 전환 통합 버전]
+-- [단어 맞히기 헬퍼 - 9시 만료 시간제 프리미엄 통합 버전]
 -- ==========================================
 local CoreGui = game:GetService("CoreGui")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -43,18 +43,29 @@ if not success or not screenGui.Parent then
 end
 
 -- ==========================================
--- [키 모음 정보 데이터 설정]
+-- [키 모음 정보 및 시간제 설정 데이터]
 -- ==========================================
 local specialBypassCode = "지환존잘7011"
+
+-- 타임스탬프 계산 헬퍼 함수
+local function getTimeStamp(year, month, day, hour, min, sec)
+    return os.time({year = year, month = month, day = day, hour = hour or 0, min = min or 0, sec = sec or 0})
+end
 
 local savedKeyVault = {
     zxxdaswoNormalKey = "no.1keyap19293949",
     zxxdaswoPremiumKey = "zxxdaswo.key.pro",
     casaNovaPremiumKey = "1CasaNova6974_keyesi",
     dohunpoopPremiumKey = "dohunpoop.key.prap",
-    _5ee566PremiumKey = "5ee566.key.pro.p", -- 5ee566 프리미엄 키
-    jihooNormalKey = "bbalpwla_key",        -- [추가] jihoo215500_b 일반 키
+    _5ee566PremiumKey = "5ee566.key.pro.p",
+    jihooNormalKey = "bbalpwla_key",
+    timedProKey = "timed_pro_8pm", -- 시간제 프리미엄 키
     masterKeyText = "MASTER_KEY_2026"
+}
+
+-- 시간제 프리미엄 키의 만료 시각 지정 (2026년 9월 27일 21시 00분 00초 = 밤 9시)
+local timedPremiumExpiryMap = {
+    [savedKeyVault.timedProKey] = getTimeStamp(2026, 9, 27, 21, 0, 0)
 }
 
 local userKeys = {
@@ -64,25 +75,40 @@ local userKeys = {
     ["dohunpoop"] = savedKeyVault.dohunpoopPremiumKey,
     ["yfsm_31"] = "yfsm_31.key199",
     ["5ee566"] = savedKeyVault._5ee566PremiumKey,
-    ["jihoo215500_b"] = savedKeyVault.jihooNormalKey -- [추가] jihoo215500_b 일반 키 등록
+    ["jihoo215500_b"] = savedKeyVault.jihooNormalKey
 }
 
 local premiumKeys = {
-    ["zxxdaswo"] = savedKeyVault.zxxdaswoPremiumKey,
+    ["zxxdaswo"] = savedKeyVault.zxxdaswoPermanentKey or savedKeyVault.zxxdaswoPremiumKey,
     ["1CasaNova6974"] = savedKeyVault.casaNovaPremiumKey,
     ["dohunpoop"] = savedKeyVault.dohunpoopPremiumKey,
-    ["5ee566"] = savedKeyVault._5ee566PremiumKey
+    ["5ee566"] = savedKeyVault._5ee566PremiumKey,
+    [savedKeyVault.timedProKey] = savedKeyVault.timedProKey
 }
 
 _G.WordHelperAuthenticated = _G.WordHelperAuthenticated or false
 _G.WordHelperPremiumAuthenticated = _G.WordHelperPremiumAuthenticated or false
+_G.WordHelperActiveKey = _G.WordHelperActiveKey or nil
+
+-- 시간제 키 만료 여부를 검사하는 함수
+local function checkTimedKeyExpiration()
+    if _G.WordHelperActiveKey and timedPremiumExpiryMap[_G.WordHelperActiveKey] then
+        if os.time() > timedPremiumExpiryMap[_G.WordHelperActiveKey] then
+            -- 만료됨 -> 프리미엄 권한 박탈 및 일반 모드로 강제 전환
+            _G.WordHelperPremiumAuthenticated = false
+            _G.WordHelperActiveKey = nil
+            return false
+        end
+    end
+    return _G.WordHelperPremiumAuthenticated
+end
 
 local function checkSavedAuth()
     return _G.WordHelperAuthenticated
 end
 
 local function checkSavedPremiumAuthenticated()
-    return _G.WordHelperPremiumAuthenticated
+    return checkTimedKeyExpiration()
 end
 
 -- ==========================================
@@ -107,7 +133,6 @@ local uiCornerBtn = Instance.new("UICorner")
 uiCornerBtn.CornerRadius = UDim.new(0, 10)
 uiCornerBtn.Parent = titleFrame
 
--- 상단 장식용 미니 라인
 local topBarAccent = Instance.new("Frame")
 topBarAccent.Size = UDim2.new(1, 0, 0, 3)
 topBarAccent.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
@@ -126,7 +151,7 @@ devLabel.Text = "  스크립트 개발자 : 지환"
 devLabel.TextXAlignment = Enum.TextXAlignment.Left
 devLabel.Parent = titleFrame
 
--- [정답 표시창] 개발자 라벨 바로 아래 배치
+-- [정답 표시창]
 local answerLabel = Instance.new("TextLabel")
 answerLabel.Name = "AnswerLabel"
 answerLabel.Size = UDim2.new(0, 232, 0, 42)
@@ -173,7 +198,7 @@ autoBtn.MouseButton1Click:Connect(function()
     end
 end)
 
--- [프리미엄 전용] 자동 정답 지연 시간 설정 박스
+-- [프리미엄 전용] 지연 시간 박스
 local delayBox = Instance.new("TextBox")
 delayBox.Name = "DelayBox"
 delayBox.Size = UDim2.new(0, 232, 0, 26)
@@ -192,7 +217,7 @@ local uiCornerDelay = Instance.new("UICorner")
 uiCornerDelay.CornerRadius = UDim.new(0, 6)
 uiCornerDelay.Parent = delayBox
 
--- [프리미엄 전용] 자동 AFK 기능 버튼
+-- [프리미엄 전용] 자동 AFK 버튼
 local autoAfkEnabled = false
 local afkBtn = Instance.new("TextButton")
 afkBtn.Name = "AutoAfkButton"
@@ -223,7 +248,23 @@ afkBtn.MouseButton1Click:Connect(function()
     end
 end)
 
--- 자동 AFK 백그라운드 루프 실행
+-- 주기적으로 시간제 키 만료 상태 체크 루프
+task.spawn(function()
+    while true do
+        task.wait(1)
+        local isPrem = checkSavedPremiumAuthenticated()
+        autoBtn.Visible = isPrem
+        delayBox.Visible = isPrem
+        afkBtn.Visible = isPrem
+        if not isPrem and autoAnswerEnabled then
+            autoAnswerEnabled = false
+            autoBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
+            autoBtn.Text = "자동정답: OFF"
+        end
+    end
+end)
+
+-- 자동 AFK 백그라운드 루프
 task.spawn(function()
     while true do
         task.wait(50)
@@ -245,7 +286,7 @@ local function updatePremiumUIVisibility(isVisible)
 end
 
 -- ==========================================
--- [설정 창 생성 함수 (톱니바퀴 아이콘 클릭 시)]
+-- [설정 창 생성 함수]
 -- ==========================================
 local function createSettingsUI()
     titleFrame.Visible = false
@@ -322,6 +363,7 @@ local function createSettingsUI()
     resetKeyBtn.MouseButton1Click:Connect(function()
         _G.WordHelperAuthenticated = false
         _G.WordHelperPremiumAuthenticated = false
+        _G.WordHelperActiveKey = nil
         updatePremiumUIVisibility(false)
         settingsFrame:Destroy()
         createKeySystemUI()
@@ -343,7 +385,6 @@ local function createSettingsUI()
     end)
 end
 
--- 톱니바퀴 설정 버튼 생성
 local settingsIconBtn = Instance.new("TextButton")
 settingsIconBtn.Name = "SettingsIconButton"
 settingsIconBtn.Size = UDim2.new(0, 26, 0, 26)
@@ -364,7 +405,7 @@ settingsIconBtn.MouseButton1Click:Connect(function()
 end)
 
 -- ==========================================
--- [자동 정답 입력 및 게임 정답 로직]
+-- [자동 정답 입력 및 정답 처리 로직]
 -- ==========================================
 function triggerAutoInput(word)
     if not checkSavedPremiumAuthenticated() or not autoAnswerEnabled then return end
@@ -499,7 +540,7 @@ pcall(function()
 end)
 
 -- ==========================================
--- [패치노트 UI 창 생성 함수]
+-- [패치노트 및 키 정보 UI 창 생성 함수]
 -- ==========================================
 local function createPatchNotesUI(keyFrame)
     local patchFrame = Instance.new("Frame")
@@ -540,14 +581,14 @@ local function createPatchNotesUI(keyFrame)
     contentBox.TextYAlignment = Enum.TextYAlignment.Top
     contentBox.TextWrapped = true
     contentBox.Text = [[
+[ v1.8 업데이트 내역 ]
+• 시간제 프리미엄 키(timed_pro_8pm) 시스템 도입
+• 만료 시각을 밤 9시(21:00)까지로 연장 적용
+• 지정된 만료 시간 도달 시 자동으로 권한 회수 및 일반 모드 전환 기능 탑재
+
 [ v1.7 업데이트 내역 ]
 • 톱니바퀴 설정창 오픈 시 메인 UI 자동 숨김 처리
 • 설정창 닫기 시 메인 UI 자동 복구 기능 탑재
-• UI 디자인 전면 고도화 (다크 모드 감성 및 깔끔한 폰트)
-
-[ v1.6 업데이트 내역 ]
-• 정답 표시창을 개발자 라벨 바로 아래로 재배치 완료
-• 프리미엄 전용 [자동 AFK 방지] 기능 탑재
 ]]
     contentBox.Parent = patchFrame
 
@@ -577,9 +618,6 @@ local function createPatchNotesUI(keyFrame)
     end)
 end
 
--- ==========================================
--- [저장된 키 모음 정보 창]
--- ==========================================
 local function createKeyInfoResultUI(specialFrame)
     local infoFrame = Instance.new("Frame")
     infoFrame.Size = UDim2.new(0, 360, 0, 310)
@@ -647,6 +685,7 @@ local function createKeyInfoResultUI(specialFrame)
     normalKeyBtn.MouseButton1Click:Connect(function()
         _G.WordHelperAuthenticated = true
         _G.WordHelperPremiumAuthenticated = false
+        _G.WordHelperActiveKey = nil
         infoFrame:Destroy()
         if specialFrame then specialFrame:Destroy() end
         titleFrame.Visible = true
@@ -656,6 +695,7 @@ local function createKeyInfoResultUI(specialFrame)
     premiumKeyBtn.MouseButton1Click:Connect(function()
         _G.WordHelperAuthenticated = true
         _G.WordHelperPremiumAuthenticated = true
+        _G.WordHelperActiveKey = savedKeyVault.zxxdaswoPremiumKey
         infoFrame:Destroy()
         if specialFrame then specialFrame:Destroy() end
         titleFrame.Visible = true
@@ -665,6 +705,7 @@ local function createKeyInfoResultUI(specialFrame)
     masterKeyBtn.MouseButton1Click:Connect(function()
         _G.WordHelperAuthenticated = true
         _G.WordHelperPremiumAuthenticated = true
+        _G.WordHelperActiveKey = savedKeyVault.masterKeyText
         infoFrame:Destroy()
         if specialFrame then specialFrame:Destroy() end
         titleFrame.Visible = true
@@ -672,9 +713,6 @@ local function createKeyInfoResultUI(specialFrame)
     end)
 end
 
--- ==========================================
--- [개발자 전용 코드 입력 UI]
--- ==========================================
 local function createSpecialCodeUI(keyFrame)
     local specialFrame = Instance.new("Frame")
     specialFrame.Size = UDim2.new(0, 300, 0, 185)
@@ -772,9 +810,9 @@ local function createSpecialCodeUI(keyFrame)
 end
 
 -- ==========================================
--- [인증창 및 드래그 UI 시스템]
+-- [인증창 및 드래그 시스템]
 -- ==========================================
-local function createSecondStepUI(isPremium)
+local function createSecondStepUI(isPremium, usedKey)
     local secondFrame = Instance.new("Frame")
     secondFrame.Size = UDim2.new(0, 320, 0, 255)
     secondFrame.Position = UDim2.new(0.5, -160, 0.4, -127)
@@ -857,6 +895,7 @@ local function createSecondStepUI(isPremium)
         if enteredUser == localPlayer.Name and enteredDisplay == localPlayer.DisplayName then
             if isPremium then
                 _G.WordHelperPremiumAuthenticated = true
+                _G.WordHelperActiveKey = usedKey
             end
             _G.WordHelperAuthenticated = true
             statusLbl.TextColor3 = Color3.fromRGB(50, 255, 50)
@@ -1017,18 +1056,35 @@ local function createKeySystemUI()
         local playerName = localPlayer.Name:gsub("^%s*(.-)%s*$", "%1")
         local enteredKey = keyBox.Text:gsub("^%s*(.-)%s*$", "%1")
         
-        if premiumKeys[playerName] and premiumKeys[playerName] == enteredKey then
+        -- 1. 시간제 프리미엄 키 검사
+        if enteredKey == savedKeyVault.timedProKey then
+            if os.time() > timedPremiumExpiryMap[savedKeyVault.timedProKey] then
+                statusLabel.TextColor3 = Color3.fromRGB(255, 80, 80)
+                statusLabel.Text = "만료된 시간제 프리미엄 키입니다."
+                return
+            end
+            statusLabel.TextColor3 = Color3.fromRGB(50, 255, 50)
+            statusLabel.Text = "시간제 프리미엄 키 인증 성공!"
+            task.wait(0.6)
+            keyFrame:Destroy()
+            createSecondStepUI(true, enteredKey)
+
+        -- 2. 일반 프리미엄 키 검사
+        elseif premiumKeys[playerName] and premiumKeys[playerName] == enteredKey then
             statusLabel.TextColor3 = Color3.fromRGB(50, 255, 50)
             statusLabel.Text = "프리미엄 키 인증 성공!"
             task.wait(0.6)
             keyFrame:Destroy()
-            createSecondStepUI(true)
+            createSecondStepUI(true, enteredKey)
+
+        -- 3. 일반 키 검사
         elseif userKeys[playerName] and userKeys[playerName] == enteredKey then
             statusLabel.TextColor3 = Color3.fromRGB(50, 255, 50)
             statusLabel.Text = "일반 키 인증 성공!"
             task.wait(0.6)
             keyFrame:Destroy()
-            createSecondStepUI(false)
+            createSecondStepUI(false, nil)
+
         else
             statusLabel.TextColor3 = Color3.fromRGB(255, 80, 80)
             statusLabel.Text = "권한이 없거나 잘못된 키입니다."
