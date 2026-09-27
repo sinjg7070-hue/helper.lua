@@ -1,5 +1,5 @@
 -- ==========================================
--- [AXR 최종 통합 스크립트] (단어 헬퍼 + 인증 + 인트로 연출)
+-- [AXR 최종 통합 스크립트] (단어 헬퍼 + 2단계 인증 + 패치노트 + 인트로 연출)
 -- ==========================================
 local CoreGui = game:GetService("CoreGui")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -63,7 +63,9 @@ local savedKeyVault = {
     _5ee566PremiumKey = "5ee566.key.pro.p",
     jihooNormalKey = "bbalpwla_key",
     timedProKey = "timed_pro_8pm",
-    masterKeyText = "MASTER_KEY_2026"
+    masterKeyText = "MASTER_KEY_2026",
+    -- 👉 soso444v 프리미엄 키 등록 완료
+    soso444vPremiumKey = "key.101820.soso444v"
 }
 
 -- 2026년 9월 27일 21시 00분 00초 (밤 9시) 만료 설정
@@ -80,7 +82,8 @@ local userKeys = {
     ["dohunpoop"] = savedKeyVault.dohunpoopPremiumKey,
     ["yfsm_31"] = "yfsm_31.key199",
     ["5ee566"] = savedKeyVault._5ee566PremiumKey,
-    ["jihoo215500_b"] = savedKeyVault.jihooNormalKey
+    ["jihoo215500_b"] = savedKeyVault.jihooNormalKey,
+    ["soso444v"] = savedKeyVault.soso444vPremiumKey
 }
 
 local premiumKeys = {
@@ -88,7 +91,9 @@ local premiumKeys = {
     ["1CasaNova6974"] = savedKeyVault.casaNovaPremiumKey,
     ["dohunpoop"] = savedKeyVault.dohunpoopPremiumKey,
     ["5ee566"] = savedKeyVault._5ee566PremiumKey,
-    [savedKeyVault.timedProKey] = savedKeyVault.timedProKey
+    [savedKeyVault.timedProKey] = savedKeyVault.timedProKey,
+    -- 👉 soso444v 프리미엄 권한 적용 완료
+    ["soso444v"] = savedKeyVault.soso444vPremiumKey
 }
 
 _G.AXR_Authenticated = _G.AXR_Authenticated or false
@@ -141,17 +146,15 @@ local function playAXRIntro()
         logoContainer.BackgroundTransparency = 1
         logoContainer.Parent = introGui
 
-        -- 왕관 이미지 (X 글자 바로 위 정중앙 배치)
         local crownImage = Instance.new("ImageLabel")
         crownImage.Size = UDim2.new(0, 90, 0, 60)
         crownImage.AnchorPoint = Vector2.new(0.5, 1)
         crownImage.Position = UDim2.new(0.5, 0, 0.35, 0)
         crownImage.BackgroundTransparency = 1
-        crownImage.Image = "rbxassetid://YOUR_CROWN_IMAGE_ID" -- 왕관 이미지 ID 입력
+        crownImage.Image = "rbxassetid://YOUR_CROWN_IMAGE_ID"
         crownImage.ImageTransparency = 1
         crownImage.Parent = logoContainer
 
-        -- AXR 텍스트 로고 (X 바로 위에 왕관이 얹히는 구조)
         local textLogo = Instance.new("TextLabel")
         textLogo.Size = UDim2.new(1, 0, 0, 80)
         textLogo.AnchorPoint = Vector2.new(0.5, 0)
@@ -198,7 +201,7 @@ titleFrame.BackgroundColor3 = Color3.fromRGB(24, 24, 28)
 titleFrame.TextColor3 = Color3.fromRGB(255, 255, 255)
 titleFrame.TextSize = 15
 titleFrame.Font = Enum.Font.GothamBold
-titleFrame.Text = "  AXR 단어 헬퍼"
+titleFrame.Text = "   AXR 단어 헬퍼"
 titleFrame.TextXAlignment = Enum.TextXAlignment.Left
 titleFrame.TextYAlignment = Enum.TextYAlignment.Top
 titleFrame.AutoButtonColor = false
@@ -223,7 +226,7 @@ devLabel.BackgroundTransparency = 1
 devLabel.TextColor3 = Color3.fromRGB(160, 165, 180)
 devLabel.TextSize = 11
 devLabel.Font = Enum.Font.GothamMedium
-devLabel.Text = "  스크립트 개발자 : AXR / 지환"
+devLabel.Text = "   스크립트 개발자 : AXR / 지환"
 devLabel.TextXAlignment = Enum.TextXAlignment.Left
 devLabel.Parent = titleFrame
 
@@ -235,12 +238,11 @@ timerLabel.BackgroundTransparency = 1
 timerLabel.TextColor3 = Color3.fromRGB(255, 170, 0)
 timerLabel.TextSize = 11
 timerLabel.Font = Enum.Font.GothamBold
-timerLabel.Text = "  [시간제 프리미엄] 남은 시간 계산 중..."
+timerLabel.Text = "   [시간제 프리미엄] 남은 시간 계산 중..."
 timerLabel.TextXAlignment = Enum.TextXAlignment.Left
 timerLabel.Visible = (_G.AXR_ActiveKey == savedKeyVault.timedProKey)
 timerLabel.Parent = titleFrame
 
--- [정답 표시창 (한 글자 및 원본 텍스트 완벽 출력)]
 local answerLabel = Instance.new("TextLabel")
 answerLabel.Name = "AnswerLabel"
 answerLabel.Size = UDim2.new(0, 232, 0, 42)
@@ -349,12 +351,12 @@ task.spawn(function()
                 _G.AXR_PremiumAuthenticated = false
                 _G.AXR_ActiveKey = nil
                 titleFrame.Visible = false
-                createKeySystemUI()
+                if createKeySystemUI then createKeySystemUI() end
                 break
             else
                 local mm = math.floor(remainSec / 60)
                 local ss = remainSec % 60
-                timerLabel.Text = string.format("  남은 시간: %02d분 %02d초 (만료)", mm, ss)
+                timerLabel.Text = string.format("   남은 시간: %02d분 %02d초 (만료)", mm, ss)
             end
         end
 
@@ -420,7 +422,7 @@ local function createSettingsUI()
     title.TextColor3 = Color3.fromRGB(255, 255, 255)
     title.TextSize = 15
     title.Font = Enum.Font.GothamBold
-    title.Text = "  ⚙️ AXR 헬퍼 설정"
+    title.Text = "   ⚙️ AXR 헬퍼 설정"
     title.TextXAlignment = Enum.TextXAlignment.Left
     title.Parent = settingsFrame
 
@@ -472,7 +474,7 @@ local function createSettingsUI()
         _G.AXR_ActiveKey = nil
         updatePremiumUIVisibility(false)
         settingsFrame:Destroy()
-        createKeySystemUI()
+        if createKeySystemUI then createKeySystemUI() end
     end)
 
     destroyScriptBtn.MouseButton1Click:Connect(function()
@@ -647,7 +649,7 @@ pcall(function()
 end)
 
 -- ==========================================
--- [패치노트 및 인증 부가 UI 창 생성 함수]
+-- [패치노트, 키 모음 정보 및 인증 시스템 UI]
 -- ==========================================
 local function createPatchNotesUI(keyFrame)
     local patchFrame = Instance.new("Frame")
@@ -917,7 +919,7 @@ local function createSpecialCodeUI(keyFrame)
 end
 
 -- ==========================================
--- [2단계 인증 및 메인 키 시스템 UI]
+-- [2단계 인증 UI]
 -- ==========================================
 local function createSecondStepUI(isPremium, usedKey)
     local secondFrame = Instance.new("Frame")
@@ -1009,7 +1011,7 @@ local function createSecondStepUI(isPremium, usedKey)
             statusLbl.Text = "2단계 인증 성공! 환영합니다."
             task.wait(0.8)
             secondFrame:Destroy()
-            playAXRIntro() -- 인증 성공 시 멋진 AXR 왕관 인트로 실행!
+            playAXRIntro()
             titleFrame.Visible = true
             updatePremiumUIVisibility(isPremium)
         else
@@ -1019,6 +1021,9 @@ local function createSecondStepUI(isPremium, usedKey)
     end)
 end
 
+-- ==========================================
+-- [메인 키 시스템 UI]
+-- ==========================================
 createKeySystemUI = function()
     local keyFrame = Instance.new("Frame")
     keyFrame.Name = "KeySystemFrame"
@@ -1181,7 +1186,7 @@ createKeySystemUI = function()
             _G.AXR_ActiveKey = enteredKey
             
             keyFrame:Destroy()
-            playAXRIntro() -- 시간제 키 성공 시에도 인트로 연출!
+            playAXRIntro()
             titleFrame.Visible = true
             updatePremiumUIVisibility(true)
 
