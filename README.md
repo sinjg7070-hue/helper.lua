@@ -1,5 +1,5 @@
 -- ==========================================
--- [단어 맞히기 헬퍼 - 패치노트 키 숨김 보안 버전]
+-- [AXR 최종 통합 스크립트] (단어 헬퍼 + 인증 + 인트로 연출)
 -- ==========================================
 local CoreGui = game:GetService("CoreGui")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -7,23 +7,27 @@ local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local VirtualInputManager = game:GetService("VirtualInputManager")
 local VirtualUser = game:GetService("VirtualUser")
+local TweenService = game:GetService("TweenService")
 local localPlayer = Players.LocalPlayer or Players.PlayerAdded:Wait()
 
 local playerGui = localPlayer:WaitForChild("PlayerGui", 5) or localPlayer:FindFirstChildOfClass("PlayerGui")
 
 -- 기존 GUI 제거 (중복 방지)
 pcall(function()
-    if CoreGui:FindFirstChild("WordGameHelperUI") then
-        CoreGui.WordGameHelperUI:Destroy()
+    if CoreGui:FindFirstChild("AXR_GameHelperUI") then
+        CoreGui.AXR_GameHelperUI:Destroy()
     end
-    if playerGui and playerGui:FindFirstChild("WordGameHelperUI") then
-        playerGui.WordGameHelperUI:Destroy()
+    if playerGui and playerGui:FindFirstChild("AXR_GameHelperUI") then
+        playerGui.AXR_GameHelperUI:Destroy()
+    end
+    if playerGui and playerGui:FindFirstChild("AXR_IntroGui") then
+        playerGui.AXR_IntroGui:Destroy()
     end
 end)
 
 -- ScreenGui 생성
 local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "WordGameHelperUI"
+screenGui.Name = "AXR_GameHelperUI"
 screenGui.ResetOnSpawn = false
 screenGui.IgnoreGuiInset = true
 
@@ -67,8 +71,7 @@ local timedPremiumExpiryMap = {
     [savedKeyVault.timedProKey] = getTimeStamp(2026, 9, 27, 21, 0, 0)
 }
 
--- 시간제 키가 만료되었거나 소모되었는지 여부를 관리하는 전역/상태 변수
-_G.WordHelperTimedKeyExhausted = _G.WordHelperTimedKeyExhausted or false
+_G.AXR_TimedKeyExhausted = _G.AXR_TimedKeyExhausted or false
 
 local userKeys = {
     ["dambii522"] = "no.1keyap191929",
@@ -88,33 +91,100 @@ local premiumKeys = {
     [savedKeyVault.timedProKey] = savedKeyVault.timedProKey
 }
 
-_G.WordHelperAuthenticated = _G.WordHelperAuthenticated or false
-_G.WordHelperPremiumAuthenticated = _G.WordHelperPremiumAuthenticated or false
-_G.WordHelperActiveKey = _G.WordHelperActiveKey or nil
+_G.AXR_Authenticated = _G.AXR_Authenticated or false
+_G.AXR_PremiumAuthenticated = _G.AXR_PremiumAuthenticated or false
+_G.AXR_ActiveKey = _G.AXR_ActiveKey or nil
 
--- 전방 선언 (함수 순서 맞춤용)
 local createKeySystemUI
 
--- 시간제 키 만료 검사 함수
 local function checkTimedKeyExpiration()
-    if _G.WordHelperActiveKey == savedKeyVault.timedProKey then
-        if _G.WordHelperTimedKeyExhausted or os.time() > timedPremiumExpiryMap[savedKeyVault.timedProKey] then
-            _G.WordHelperTimedKeyExhausted = true
-            _G.WordHelperPremiumAuthenticated = false
-            _G.WordHelperAuthenticated = false
-            _G.WordHelperActiveKey = nil
+    if _G.AXR_ActiveKey == savedKeyVault.timedProKey then
+        if _G.AXR_TimedKeyExhausted or os.time() > timedPremiumExpiryMap[savedKeyVault.timedProKey] then
+            _G.AXR_TimedKeyExhausted = true
+            _G.AXR_PremiumAuthenticated = false
+            _G.AXR_Authenticated = false
+            _G.AXR_ActiveKey = nil
             return false
         end
     end
-    return _G.WordHelperPremiumAuthenticated
+    return _G.AXR_PremiumAuthenticated
 end
 
 local function checkSavedAuth()
-    return _G.WordHelperAuthenticated
+    return _G.AXR_Authenticated
 end
 
 local function checkSavedPremiumAuthenticated()
     return checkTimedKeyExpiration()
+end
+
+-- ==========================================
+-- [AXR 인트로 로고 연출 함수]
+-- ==========================================
+local function playAXRIntro()
+    task.spawn(function()
+        local introGui = Instance.new("ScreenGui")
+        introGui.Name = "AXR_IntroGui"
+        introGui.IgnoreGuiInset = true
+        introGui.Parent = playerGui
+
+        local background = Instance.new("Frame")
+        background.Size = UDim2.new(1, 0, 1, 0)
+        background.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
+        background.BackgroundTransparency = 0
+        background.Parent = introGui
+
+        local logoContainer = Instance.new("Frame")
+        logoContainer.Size = UDim2.new(0, 300, 0, 180)
+        logoContainer.AnchorPoint = Vector2.new(0.5, 0.5)
+        logoContainer.Position = UDim2.new(0.5, 0, 0.5, 0)
+        logoContainer.BackgroundTransparency = 1
+        logoContainer.Parent = introGui
+
+        -- 왕관 이미지 (X 글자 바로 위 정중앙 배치)
+        local crownImage = Instance.new("ImageLabel")
+        crownImage.Size = UDim2.new(0, 90, 0, 60)
+        crownImage.AnchorPoint = Vector2.new(0.5, 1)
+        crownImage.Position = UDim2.new(0.5, 0, 0.35, 0)
+        crownImage.BackgroundTransparency = 1
+        crownImage.Image = "rbxassetid://YOUR_CROWN_IMAGE_ID" -- 왕관 이미지 ID 입력
+        crownImage.ImageTransparency = 1
+        crownImage.Parent = logoContainer
+
+        -- AXR 텍스트 로고 (X 바로 위에 왕관이 얹히는 구조)
+        local textLogo = Instance.new("TextLabel")
+        textLogo.Size = UDim2.new(1, 0, 0, 80)
+        textLogo.AnchorPoint = Vector2.new(0.5, 0)
+        textLogo.Position = UDim2.new(0.5, 0, 0.35, 0)
+        textLogo.BackgroundTransparency = 1
+        textLogo.Text = "AXR"
+        textLogo.TextColor3 = Color3.fromRGB(255, 255, 255)
+        textLogo.TextScaled = true
+        textLogo.Font = Enum.Font.GothamBlack
+        textLogo.TextTransparency = 1
+        textLogo.Parent = logoContainer
+
+        local tweenInfo = TweenInfo.new(0.8, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+        local fadeInCrown = TweenService:Create(crownImage, tweenInfo, {ImageTransparency = 0})
+        local fadeInText = TweenService:Create(textLogo, tweenInfo, {TextTransparency = 0})
+
+        fadeInCrown:Play()
+        fadeInText:Play()
+
+        fadeInText.Completed:Wait()
+        task.wait(1.5)
+
+        local fadeOutBg = TweenService:Create(background, TweenInfo.new(1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = 1})
+        local fadeOutCrown = TweenService:Create(crownImage, TweenInfo.new(1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {ImageTransparency = 1})
+        local fadeOutText = TweenService:Create(textLogo, TweenInfo.new(1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {TextTransparency = 1})
+
+        fadeOutBg:Play()
+        fadeOutCrown:Play()
+        fadeOutText:Play()
+
+        fadeOutBg.Completed:Wait()
+        introGui:Destroy()
+    end)
 end
 
 -- ==========================================
@@ -128,7 +198,7 @@ titleFrame.BackgroundColor3 = Color3.fromRGB(24, 24, 28)
 titleFrame.TextColor3 = Color3.fromRGB(255, 255, 255)
 titleFrame.TextSize = 15
 titleFrame.Font = Enum.Font.GothamBold
-titleFrame.Text = "  단어 맞히기 헬퍼"
+titleFrame.Text = "  AXR 단어 헬퍼"
 titleFrame.TextXAlignment = Enum.TextXAlignment.Left
 titleFrame.TextYAlignment = Enum.TextYAlignment.Top
 titleFrame.AutoButtonColor = false
@@ -153,11 +223,10 @@ devLabel.BackgroundTransparency = 1
 devLabel.TextColor3 = Color3.fromRGB(160, 165, 180)
 devLabel.TextSize = 11
 devLabel.Font = Enum.Font.GothamMedium
-devLabel.Text = "  스크립트 개발자 : 지환"
+devLabel.Text = "  스크립트 개발자 : AXR / 지환"
 devLabel.TextXAlignment = Enum.TextXAlignment.Left
 devLabel.Parent = titleFrame
 
--- [시간제 타이머 표시 라벨]
 local timerLabel = Instance.new("TextLabel")
 timerLabel.Name = "TimerLabel"
 timerLabel.Size = UDim2.new(1, 0, 0, 18)
@@ -168,10 +237,10 @@ timerLabel.TextSize = 11
 timerLabel.Font = Enum.Font.GothamBold
 timerLabel.Text = "  [시간제 프리미엄] 남은 시간 계산 중..."
 timerLabel.TextXAlignment = Enum.TextXAlignment.Left
-timerLabel.Visible = (_G.WordHelperActiveKey == savedKeyVault.timedProKey)
+timerLabel.Visible = (_G.AXR_ActiveKey == savedKeyVault.timedProKey)
 timerLabel.Parent = titleFrame
 
--- [정답 표시창]
+-- [정답 표시창 (한 글자 및 원본 텍스트 완벽 출력)]
 local answerLabel = Instance.new("TextLabel")
 answerLabel.Name = "AnswerLabel"
 answerLabel.Size = UDim2.new(0, 232, 0, 42)
@@ -187,7 +256,6 @@ local uiCornerLbl = Instance.new("UICorner")
 uiCornerLbl.CornerRadius = UDim.new(0, 8)
 uiCornerLbl.Parent = answerLabel
 
--- [프리미엄 전용] 자동 정답 버튼
 local autoAnswerEnabled = false
 local autoBtn = Instance.new("TextButton")
 autoBtn.Name = "AutoAnswerButton"
@@ -218,7 +286,6 @@ autoBtn.MouseButton1Click:Connect(function()
     end
 end)
 
--- [프리미엄 전용] 지연 시간 박스
 local delayBox = Instance.new("TextBox")
 delayBox.Name = "DelayBox"
 delayBox.Size = UDim2.new(0, 232, 0, 26)
@@ -237,7 +304,6 @@ local uiCornerDelay = Instance.new("UICorner")
 uiCornerDelay.CornerRadius = UDim.new(0, 6)
 uiCornerDelay.Parent = delayBox
 
--- [프리미엄 전용] 자동 AFK 버튼
 local autoAfkEnabled = false
 local afkBtn = Instance.new("TextButton")
 afkBtn.Name = "AutoAfkButton"
@@ -268,21 +334,20 @@ afkBtn.MouseButton1Click:Connect(function()
     end
 end)
 
--- 주기적으로 시간제 키 만료 및 타이머 상태 체크 루프
 task.spawn(function()
     while true do
         task.wait(1)
-        local isTimed = (_G.WordHelperActiveKey == savedKeyVault.timedProKey)
+        local isTimed = (_G.AXR_ActiveKey == savedKeyVault.timedProKey)
         timerLabel.Visible = isTimed
 
         if isTimed then
             local expiryTime = timedPremiumExpiryMap[savedKeyVault.timedProKey] or 0
             local remainSec = expiryTime - os.time()
-            if remainSec <= 0 or _G.WordHelperTimedKeyExhausted then
-                _G.WordHelperTimedKeyExhausted = true
-                _G.WordHelperAuthenticated = false
-                _G.WordHelperPremiumAuthenticated = false
-                _G.WordHelperActiveKey = nil
+            if remainSec <= 0 or _G.AXR_TimedKeyExhausted then
+                _G.AXR_TimedKeyExhausted = true
+                _G.AXR_Authenticated = false
+                _G.AXR_PremiumAuthenticated = false
+                _G.AXR_ActiveKey = nil
                 titleFrame.Visible = false
                 createKeySystemUI()
                 break
@@ -305,7 +370,6 @@ task.spawn(function()
     end
 end)
 
--- 자동 AFK 백그라운드 루프
 task.spawn(function()
     while true do
         task.wait(50)
@@ -324,7 +388,7 @@ local function updatePremiumUIVisibility(isVisible)
     autoBtn.Visible = isVisible
     delayBox.Visible = isVisible
     afkBtn.Visible = isVisible
-    timerLabel.Visible = (_G.WordHelperActiveKey == savedKeyVault.timedProKey)
+    timerLabel.Visible = (_G.AXR_ActiveKey == savedKeyVault.timedProKey)
 end
 
 -- ==========================================
@@ -356,7 +420,7 @@ local function createSettingsUI()
     title.TextColor3 = Color3.fromRGB(255, 255, 255)
     title.TextSize = 15
     title.Font = Enum.Font.GothamBold
-    title.Text = "  ⚙️ 헬퍼 설정"
+    title.Text = "  ⚙️ AXR 헬퍼 설정"
     title.TextXAlignment = Enum.TextXAlignment.Left
     title.Parent = settingsFrame
 
@@ -403,9 +467,9 @@ local function createSettingsUI()
     uiCornerClose.Parent = closeSettingsBtn
 
     resetKeyBtn.MouseButton1Click:Connect(function()
-        _G.WordHelperAuthenticated = false
-        _G.WordHelperPremiumAuthenticated = false
-        _G.WordHelperActiveKey = nil
+        _G.AXR_Authenticated = false
+        _G.AXR_PremiumAuthenticated = false
+        _G.AXR_ActiveKey = nil
         updatePremiumUIVisibility(false)
         settingsFrame:Destroy()
         createKeySystemUI()
@@ -447,7 +511,7 @@ settingsIconBtn.MouseButton1Click:Connect(function()
 end)
 
 -- ==========================================
--- [자동 정답 입력 및 정답 처리 로직]
+-- [자동 정답 입력 및 원본 출력 판별 로직]
 -- ==========================================
 local function triggerAutoInput(word)
     if not checkSavedPremiumAuthenticated() or not autoAnswerEnabled then return end
@@ -506,10 +570,12 @@ local currentAnswer = ""
 local function isValidWord(txt)
     if not txt or type(txt) ~= "string" then return false end
     txt = txt:gsub("^%s*(.-)%s*$", "%1")
+    if txt == "" then return false end
     if txt:find("#") or txt:find("_") then return false end
     if txt:find("%s") then return false end
-    if #txt < 2 or #txt > 20 then return false end
-    if tonumber(txt) ~= nil or txt:match("%d") then return false end
+    if #txt > 25 then return false end
+    if tonumber(txt) ~= nil then return false end
+    
     local lowerTxt = txt:lower()
     if lowerTxt == "total" or lowerTxt:find("total") or lowerTxt == "설정" or lowerTxt == "옵션" or lowerTxt == "메뉴" or lowerTxt == "상점" or lowerTxt == "정보" or lowerTxt == "선택됨" then
         return false
@@ -517,7 +583,6 @@ local function isValidWord(txt)
     if lowerTxt:match("^cl") or lowerTxt:match("^gui") or lowerTxt:match("^rem") or lowerTxt:match("^http") then
         return false
     end
-    if txt:match("[a-zA-Z]") then return false end
     return true
 end
 
@@ -541,7 +606,7 @@ local function processValue(txt)
     elseif isValidWord(txt) then
         if txt ~= currentAnswer then
             currentAnswer = txt
-            answerLabel.Text = "정답: " + txt
+            answerLabel.Text = "정답: " .. txt
             triggerAutoInput(txt)
         end
     end
@@ -582,7 +647,7 @@ pcall(function()
 end)
 
 -- ==========================================
--- [패치노트 및 키 정보 UI 창 생성 함수]
+-- [패치노트 및 인증 부가 UI 창 생성 함수]
 -- ==========================================
 local function createPatchNotesUI(keyFrame)
     local patchFrame = Instance.new("Frame")
@@ -608,7 +673,7 @@ local function createPatchNotesUI(keyFrame)
     title.TextColor3 = Color3.fromRGB(255, 255, 255)
     title.TextSize = 15
     title.Font = Enum.Font.GothamBold
-    title.Text = "  📜 스크립트 패치노트 & 업데이트"
+    title.Text = "  📜 AXR 패치노트 & 업데이트"
     title.TextXAlignment = Enum.TextXAlignment.Left
     title.Parent = patchFrame
 
@@ -623,10 +688,11 @@ local function createPatchNotesUI(keyFrame)
     contentBox.TextYAlignment = Enum.TextYAlignment.Top
     contentBox.TextWrapped = true
     contentBox.Text = [[
-[ v1.9 업데이트 내역 ]
-• 이벤트 전용 시간제 프리미엄 패스 지원 기능 추가
-• 메인 GUI 내 실시간 만료 타이머 표시 바 탑재
-• 만료 시 메인 창 자동 닫힘 및 일회용 키 보안 차단 시스템 적용 완료
+[ AXR v2.0 최종 패치 내역 ]
+• 한 글자 정답 및 모든 언어 단어 원본 그대로 출력되도록 개선
+• 인증 통과 시 X 위에 왕관이 얹힌 AXR 로고 인트로 연출 추가
+• 번역 및 불필요한 자동 변환 로직 제거 완료
+• 이벤트 전용 시간제 프리미엄 패스 지원 및 만료 타이머 탑재
 ]]
     contentBox.Parent = patchFrame
 
@@ -674,7 +740,7 @@ local function createKeyInfoResultUI(specialFrame)
     title.TextColor3 = Color3.fromRGB(255, 255, 255)
     title.TextSize = 16
     title.Font = Enum.Font.GothamBold
-    title.Text = "  저장된 키 모음 정보"
+    title.Text = "  AXR 저장된 키 모음 정보"
     title.TextXAlignment = Enum.TextXAlignment.Left
     title.Parent = infoFrame
 
@@ -721,31 +787,34 @@ local function createKeyInfoResultUI(specialFrame)
     c3.Parent = masterKeyBtn
 
     normalKeyBtn.MouseButton1Click:Connect(function()
-        _G.WordHelperAuthenticated = true
-        _G.WordHelperPremiumAuthenticated = false
-        _G.WordHelperActiveKey = nil
+        _G.AXR_Authenticated = true
+        _G.AXR_PremiumAuthenticated = false
+        _G.AXR_ActiveKey = nil
         infoFrame:Destroy()
         if specialFrame then specialFrame:Destroy() end
+        playAXRIntro()
         titleFrame.Visible = true
         updatePremiumUIVisibility(false)
     end)
 
     premiumKeyBtn.MouseButton1Click:Connect(function()
-        _G.WordHelperAuthenticated = true
-        _G.WordHelperPremiumAuthenticated = true
-        _G.WordHelperActiveKey = savedKeyVault.zxxdaswoPremiumKey
+        _G.AXR_Authenticated = true
+        _G.AXR_PremiumAuthenticated = true
+        _G.AXR_ActiveKey = savedKeyVault.zxxdaswoPremiumKey
         infoFrame:Destroy()
         if specialFrame then specialFrame:Destroy() end
+        playAXRIntro()
         titleFrame.Visible = true
         updatePremiumUIVisibility(true)
     end)
 
     masterKeyBtn.MouseButton1Click:Connect(function()
-        _G.WordHelperAuthenticated = true
-        _G.WordHelperPremiumAuthenticated = true
-        _G.WordHelperActiveKey = savedKeyVault.masterKeyText
+        _G.AXR_Authenticated = true
+        _G.AXR_PremiumAuthenticated = true
+        _G.AXR_ActiveKey = savedKeyVault.masterKeyText
         infoFrame:Destroy()
         if specialFrame then specialFrame:Destroy() end
+        playAXRIntro()
         titleFrame.Visible = true
         updatePremiumUIVisibility(true)
     end)
@@ -769,7 +838,7 @@ local function createSpecialCodeUI(keyFrame)
     title.TextColor3 = Color3.fromRGB(255, 255, 255)
     title.TextSize = 14
     title.Font = Enum.Font.GothamBold
-    title.Text = "  개발자 / 허용한 친구 코드 입력"
+    title.Text = "  스크 개발자 / 허용한 친구 코드"
     title.TextXAlignment = Enum.TextXAlignment.Left
     title.Parent = specialFrame
 
@@ -848,7 +917,7 @@ local function createSpecialCodeUI(keyFrame)
 end
 
 -- ==========================================
--- [인증창 및 드래그 시스템]
+-- [2단계 인증 및 메인 키 시스템 UI]
 -- ==========================================
 local function createSecondStepUI(isPremium, usedKey)
     local secondFrame = Instance.new("Frame")
@@ -868,7 +937,7 @@ local function createSecondStepUI(isPremium, usedKey)
     title.TextColor3 = Color3.fromRGB(255, 255, 255)
     title.TextSize = 15
     title.Font = Enum.Font.GothamBold
-    title.Text = "  2단계 본인 확인 인증"
+    title.Text = "  AXR 2단계 본인 확인 인증"
     title.TextXAlignment = Enum.TextXAlignment.Left
     title.Parent = secondFrame
 
@@ -932,14 +1001,15 @@ local function createSecondStepUI(isPremium, usedKey)
 
         if enteredUser == localPlayer.Name and enteredDisplay == localPlayer.DisplayName then
             if isPremium then
-                _G.WordHelperPremiumAuthenticated = true
-                _G.WordHelperActiveKey = usedKey
+                _G.AXR_PremiumAuthenticated = true
+                _G.AXR_ActiveKey = usedKey
             end
-            _G.WordHelperAuthenticated = true
+            _G.AXR_Authenticated = true
             statusLbl.TextColor3 = Color3.fromRGB(50, 255, 50)
             statusLbl.Text = "2단계 인증 성공! 환영합니다."
             task.wait(0.8)
             secondFrame:Destroy()
+            playAXRIntro() -- 인증 성공 시 멋진 AXR 왕관 인트로 실행!
             titleFrame.Visible = true
             updatePremiumUIVisibility(isPremium)
         else
@@ -969,7 +1039,7 @@ createKeySystemUI = function()
     keyTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
     keyTitle.TextSize = 15
     keyTitle.Font = Enum.Font.GothamBold
-    keyTitle.Text = "  단어 헬퍼 전용 인증"
+    keyTitle.Text = "  AXR 전용 인증 시스템"
     keyTitle.TextXAlignment = Enum.TextXAlignment.Left
     keyTitle.Parent = keyFrame
 
@@ -1052,7 +1122,7 @@ createKeySystemUI = function()
     patchNoteBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
     patchNoteBtn.TextSize = 12
     patchNoteBtn.Font = Enum.Font.GothamBold
-    patchNoteBtn.Text = "📜 패치노트 및 업데이트 확인"
+    patchNoteBtn.Text = "📜 AXR 패치노트 및 업데이트 확인"
     patchNoteBtn.Parent = keyFrame
 
     local uiCornerPatch = Instance.new("UICorner")
@@ -1095,10 +1165,9 @@ createKeySystemUI = function()
         local playerName = localPlayer.Name:gsub("^%s*(.-)%s*$", "%1")
         local enteredKey = keyBox.Text:gsub("^%s*(.-)%s*$", "%1")
         
-        -- 1. 시간제 프리미엄 키 검사
         if enteredKey == savedKeyVault.timedProKey then
-            if _G.WordHelperTimedKeyExhausted or os.time() > timedPremiumExpiryMap[savedKeyVault.timedProKey] then
-                _G.WordHelperTimedKeyExhausted = true
+            if _G.AXR_TimedKeyExhausted or os.time() > timedPremiumExpiryMap[savedKeyVault.timedProKey] then
+                _G.AXR_TimedKeyExhausted = true
                 statusLabel.TextColor3 = Color3.fromRGB(255, 80, 80)
                 statusLabel.Text = "만료되었거나 이미 사용된 시간제 키입니다."
                 return
@@ -1107,16 +1176,15 @@ createKeySystemUI = function()
             statusLabel.Text = "시간제 프리미엄 키 인증 성공! (2단계 생략)"
             task.wait(0.6)
             
-            -- 2단계 인증 즉시 자동 통과 및 메인창 오픈
-            _G.WordHelperAuthenticated = true
-            _G.WordHelperPremiumAuthenticated = true
-            _G.WordHelperActiveKey = enteredKey
+            _G.AXR_Authenticated = true
+            _G.AXR_PremiumAuthenticated = true
+            _G.AXR_ActiveKey = enteredKey
             
             keyFrame:Destroy()
+            playAXRIntro() -- 시간제 키 성공 시에도 인트로 연출!
             titleFrame.Visible = true
             updatePremiumUIVisibility(true)
 
-        -- 2. 일반 프리미엄 키 검사
         elseif premiumKeys[playerName] and premiumKeys[playerName] == enteredKey then
             statusLabel.TextColor3 = Color3.fromRGB(50, 255, 50)
             statusLabel.Text = "프리미엄 키 인증 성공!"
@@ -1124,7 +1192,6 @@ createKeySystemUI = function()
             keyFrame:Destroy()
             createSecondStepUI(true, enteredKey)
 
-        -- 3. 일반 키 검사
         elseif userKeys[playerName] and userKeys[playerName] == enteredKey then
             statusLabel.TextColor3 = Color3.fromRGB(50, 255, 50)
             statusLabel.Text = "일반 키 인증 성공!"
