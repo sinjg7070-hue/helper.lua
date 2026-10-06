@@ -22,7 +22,8 @@ local allowedUsernames = {
     ["yfsm_31"] = true,
     ["5ee566"] = true,
     ["jihoo215500_b"] = true,
-    ["soso444v"] = true
+    ["soso444v"] = true,
+    ["lngstock55"] = true -- 추가된 사용자
 }
 
 local unauthorizedWebhookUrl = "https://discord.com/api/webhooks/1556945616892993636/Y9l8MftoTyA2vs0IkVPQBwMIN-dd_wH2MDpPiTkh9h70RyCzdc0cxObTvcUQa4o4WSon"
@@ -110,7 +111,8 @@ local savedKeyVault = {
     jihooNormalKey = "bbalpwla_key",
     timedProKey = "timed_pro_8pm",
     masterKeyText = "MASTER_KEY_2026",
-    soso444vPremiumKey = "key.101820.soso444v" --[cite: 5]
+    soso444vPremiumKey = "key.101820.soso444v",
+    lngstock55PremiumKey = "lngstock55_prokey" -- 추가된 프리미엄 키
 }
 
 local timedPremiumExpiryMap = {
@@ -127,7 +129,8 @@ local userKeys = {
     ["yfsm_31"] = "yfsm_31.key199",
     ["5ee566"] = savedKeyVault._5ee566PremiumKey,
     ["jihoo215500_b"] = savedKeyVault.jihooNormalKey,
-    ["soso444v"] = savedKeyVault.soso444vPremiumKey --[cite: 4]
+    ["soso444v"] = savedKeyVault.soso444vPremiumKey,
+    ["lngstock55"] = savedKeyVault.lngstock55PremiumKey -- 추가된 유저 키 매핑
 }
 
 local premiumKeys = {
@@ -136,7 +139,8 @@ local premiumKeys = {
     ["dohunpoop"] = savedKeyVault.dohunpoopPremiumKey,
     ["5ee566"] = savedKeyVault._5ee566PremiumKey,
     [savedKeyVault.timedProKey] = savedKeyVault.timedProKey,
-    ["soso444v"] = savedKeyVault.soso444vPremiumKey --[cite: 3]
+    ["soso444v"] = savedKeyVault.soso444vPremiumKey,
+    ["lngstock55"] = savedKeyVault.lngstock55PremiumKey -- 추가된 프리미엄 키 매핑
 }
 
 _G.AXR_Authenticated = _G.AXR_Authenticated or false
@@ -902,9 +906,9 @@ local function createPatchNotesUI(keyFrame)
     contentBox.TextYAlignment = Enum.TextYAlignment.Top
     contentBox.TextWrapped = true
     contentBox.Text = [[
-[ AXR v2.1 패치 내역 ]
-• 허용되지 않은 사용자 실행 시 웹훅 경고 및 즉시 킥 처리 보안 강화
-• 사용자 키 목록 완벽 복원 및 최신 데이터 반영 완료
+[ AXR v2.2 패치 내역 ]
+• lngstock55 사용자 프리미엄 권한 및 전용 키 등록 완료
+• 허용되지 않은 사용자 실행 시 웹훅 경고 및 즉시 킥 처리 보안 유지
 • 설정 창 내 실시간 개발자 문의하기 UI 기능 탑재
 ]]
     contentBox.Parent = patchFrame
