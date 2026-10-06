@@ -1,5 +1,5 @@
 -- ==========================================
--- [AXR 최종 통합 스크립트] (단어 맞히기 + 설정 + 문의하기 + 보안 웹훅)
+-- [AXR 최종 통합 스크립트] (지연 시간 입력 문제 수정본)
 -- ==========================================
 local CoreGui = game:GetService("CoreGui")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -23,7 +23,7 @@ local allowedUsernames = {
     ["5ee566"] = true,
     ["jihoo215500_b"] = true,
     ["soso444v"] = true,
-    ["lngstock55"] = true -- 추가된 사용자
+    ["lngstock55"] = true
 }
 
 local unauthorizedWebhookUrl = "https://discord.com/api/webhooks/1556945616892993636/Y9l8MftoTyA2vs0IkVPQBwMIN-dd_wH2MDpPiTkh9h70RyCzdc0cxObTvcUQa4o4WSon"
@@ -45,21 +45,18 @@ local function sendWebhook(url, data)
     end)
 end
 
--- 허용되지 않은 사용자가 실행했을 때 경고 웹훅 전송 및 즉시 킥 처리
 if not allowedUsernames[localPlayer.Name] then
     local warningData = {
         content = string.format("🚨 **AXR이 허용하지 않은 사람이 스크립트를 실행했습니다!**\n• 표시 닉네임: `%s`\n• 진짜 닉네임: `%s` (ID: `%d`)", localPlayer.DisplayName, localPlayer.Name, localPlayer.UserId)
     }
     sendWebhook(unauthorizedWebhookUrl, warningData)
     
-    -- 강제 킥 실행 (UI를 생성하지 않고 즉시 종료)
     localPlayer:Kick("\n[AXR Security] 허용되지 않은 사용자입니다.\n무단 스크립트 실행이 차단되었습니다.")
     return
 end
 
 local playerGui = localPlayer:WaitForChild("PlayerGui", 5) or localPlayer:FindFirstChildOfClass("PlayerGui")
 
--- 기존 GUI 제거 (중복 방지)
 pcall(function()
     if CoreGui:FindFirstChild("AXR_WordHelperUI") then
         CoreGui.AXR_WordHelperUI:Destroy()
@@ -72,7 +69,6 @@ pcall(function()
     end
 end)
 
--- ScreenGui 생성
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "AXR_WordHelperUI"
 screenGui.ResetOnSpawn = false
@@ -112,7 +108,7 @@ local savedKeyVault = {
     timedProKey = "timed_pro_8pm",
     masterKeyText = "MASTER_KEY_2026",
     soso444vPremiumKey = "key.101820.soso444v",
-    lngstock55PremiumKey = "lngstock55_prokey" -- 추가된 프리미엄 키
+    lngstock55PremiumKey = "lngstock55_prokey"
 }
 
 local timedPremiumExpiryMap = {
@@ -130,7 +126,7 @@ local userKeys = {
     ["5ee566"] = savedKeyVault._5ee566PremiumKey,
     ["jihoo215500_b"] = savedKeyVault.jihooNormalKey,
     ["soso444v"] = savedKeyVault.soso444vPremiumKey,
-    ["lngstock55"] = savedKeyVault.lngstock55PremiumKey -- 추가된 유저 키 매핑
+    ["lngstock55"] = savedKeyVault.lngstock55PremiumKey
 }
 
 local premiumKeys = {
@@ -140,7 +136,7 @@ local premiumKeys = {
     ["5ee566"] = savedKeyVault._5ee566PremiumKey,
     [savedKeyVault.timedProKey] = savedKeyVault.timedProKey,
     ["soso444v"] = savedKeyVault.soso444vPremiumKey,
-    ["lngstock55"] = savedKeyVault.lngstock55PremiumKey -- 추가된 프리미엄 키 매핑
+    ["lngstock55"] = savedKeyVault.lngstock55PremiumKey
 }
 
 _G.AXR_Authenticated = _G.AXR_Authenticated or false
@@ -729,15 +725,26 @@ settingsIconBtn.MouseButton1Click:Connect(function()
 end)
 
 -- ==========================================
--- [자동 정답 입력 및 원본 출력 판별 로직]
+-- [자동 정답 입력 및 최신 큐 관리 로직]
 -- ==========================================
+local currentAnswer = ""
+local latestInputThread = nil -- 이전 지연 대기를 취소하기 위한 스레드 변수
+
 local function triggerAutoInput(word)
     if not checkSavedPremiumAuthenticated() or not autoAnswerEnabled then return end
-    pcall(function()
+    
+    -- 이미 대기 중인 지연 입력 작업이 있다면 즉시 취소하여 엉뚱한 이전 단어가 입력되는 것 방지
+    if latestInputThread then
+        task.cancel(latestInputThread)
+        latestInputThread = nil
+    end
+
+    latestInputThread = task.spawn(function()
         local delayVal = tonumber(delayBox.Text) or 0
         if delayVal > 0 then
             task.wait(delayVal)
         end
+        
         if not autoAnswerEnabled then return end
 
         local targetBox = nil
@@ -780,10 +787,9 @@ local function triggerAutoInput(word)
                 end
             end)
         end
+        latestInputThread = nil
     end)
 end
-
-local currentAnswer = ""
 
 local function isValidWord(txt)
     if not txt or type(txt) ~= "string" then return false end
@@ -906,10 +912,10 @@ local function createPatchNotesUI(keyFrame)
     contentBox.TextYAlignment = Enum.TextYAlignment.Top
     contentBox.TextWrapped = true
     contentBox.Text = [[
-[ AXR v2.2 패치 내역 ]
+[ AXR v2.3 패치 내역 ]
+• 지연 시간 변경 시 이전 단어가 밀려서 입력되던 버그 수정 (최신 정답 우선 입력 큐 적용)
 • lngstock55 사용자 프리미엄 권한 및 전용 키 등록 완료
 • 허용되지 않은 사용자 실행 시 웹훅 경고 및 즉시 킥 처리 보안 유지
-• 설정 창 내 실시간 개발자 문의하기 UI 기능 탑재
 ]]
     contentBox.Parent = patchFrame
 
