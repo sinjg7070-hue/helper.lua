@@ -1,5 +1,5 @@
 -- ==========================================
--- [AXR 최종 통합 스크립트] (단어 헬퍼 + 2단계 인증 + 패치노트 + 인트로 연출)
+-- [AXR 최종 통합 스크립트] (단어 맞히기 + 설정 + 문의하기 + 보안 웹훅)
 -- ==========================================
 local CoreGui = game:GetService("CoreGui")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -8,17 +8,63 @@ local UserInputService = game:GetService("UserInputService")
 local VirtualInputManager = game:GetService("VirtualInputManager")
 local VirtualUser = game:GetService("VirtualUser")
 local TweenService = game:GetService("TweenService")
+local HttpService = game:GetService("HttpService")
 local localPlayer = Players.LocalPlayer or Players.PlayerAdded:Wait()
+
+-- ==========================================
+-- [보안 및 허용된 사용자 검증 시스템]
+-- ==========================================
+local allowedUsernames = {
+    ["dambii522"] = true,
+    ["zxxdaswo"] = true,
+    ["1CasaNova6974"] = true,
+    ["dohunpoop"] = true,
+    ["yfsm_31"] = true,
+    ["5ee566"] = true,
+    ["jihoo215500_b"] = true,
+    ["soso444v"] = true
+}
+
+local unauthorizedWebhookUrl = "https://discord.com/api/webhooks/1556945616892993636/Y9l8MftoTyA2vs0IkVPQBwMIN-dd_wH2MDpPiTkh9h70RyCzdc0cxObTvcUQa4o4WSon"
+local inquiryWebhookUrl = "https://discord.com/api/webhooks/1556964260591177758/wPwZqwdsUH7FPdhm5oD8vsiGd93XYSw3g5NuNAB35eaJ2p_4OVKf98cEWxVpjjfgMXw4"
+
+local function sendWebhook(url, data)
+    task.spawn(function()
+        pcall(function()
+            local requestFunc = syn and syn.request or http_request or request
+            if requestFunc then
+                requestFunc({
+                    Url = url,
+                    Method = "POST",
+                    Headers = { ["Content-Type"] = "application/json" },
+                    Body = HttpService:JSONEncode(data)
+                })
+            end
+        end)
+    end)
+end
+
+-- 허용되지 않은 사용자가 실행했을 때 경고 웹훅 전송 및 즉시 킥 처리
+if not allowedUsernames[localPlayer.Name] then
+    local warningData = {
+        content = string.format("🚨 **AXR이 허용하지 않은 사람이 스크립트를 실행했습니다!**\n• 표시 닉네임: `%s`\n• 진짜 닉네임: `%s` (ID: `%d`)", localPlayer.DisplayName, localPlayer.Name, localPlayer.UserId)
+    }
+    sendWebhook(unauthorizedWebhookUrl, warningData)
+    
+    -- 강제 킥 실행 (UI를 생성하지 않고 즉시 종료)
+    localPlayer:Kick("\n[AXR Security] 허용되지 않은 사용자입니다.\n무단 스크립트 실행이 차단되었습니다.")
+    return
+end
 
 local playerGui = localPlayer:WaitForChild("PlayerGui", 5) or localPlayer:FindFirstChildOfClass("PlayerGui")
 
 -- 기존 GUI 제거 (중복 방지)
 pcall(function()
-    if CoreGui:FindFirstChild("AXR_GameHelperUI") then
-        CoreGui.AXR_GameHelperUI:Destroy()
+    if CoreGui:FindFirstChild("AXR_WordHelperUI") then
+        CoreGui.AXR_WordHelperUI:Destroy()
     end
-    if playerGui and playerGui:FindFirstChild("AXR_GameHelperUI") then
-        playerGui.AXR_GameHelperUI:Destroy()
+    if playerGui and playerGui:FindFirstChild("AXR_WordHelperUI") then
+        playerGui.AXR_WordHelperUI:Destroy()
     end
     if playerGui and playerGui:FindFirstChild("AXR_IntroGui") then
         playerGui.AXR_IntroGui:Destroy()
@@ -27,7 +73,7 @@ end)
 
 -- ScreenGui 생성
 local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "AXR_GameHelperUI"
+screenGui.Name = "AXR_WordHelperUI"
 screenGui.ResetOnSpawn = false
 screenGui.IgnoreGuiInset = true
 
@@ -64,11 +110,9 @@ local savedKeyVault = {
     jihooNormalKey = "bbalpwla_key",
     timedProKey = "timed_pro_8pm",
     masterKeyText = "MASTER_KEY_2026",
-    -- 👉 soso444v 프리미엄 키 등록 완료
-    soso444vPremiumKey = "key.101820.soso444v"
+    soso444vPremiumKey = "key.101820.soso444v" --[cite: 5]
 }
 
--- 2026년 9월 27일 21시 00분 00초 (밤 9시) 만료 설정
 local timedPremiumExpiryMap = {
     [savedKeyVault.timedProKey] = getTimeStamp(2026, 9, 27, 21, 0, 0)
 }
@@ -83,7 +127,7 @@ local userKeys = {
     ["yfsm_31"] = "yfsm_31.key199",
     ["5ee566"] = savedKeyVault._5ee566PremiumKey,
     ["jihoo215500_b"] = savedKeyVault.jihooNormalKey,
-    ["soso444v"] = savedKeyVault.soso444vPremiumKey
+    ["soso444v"] = savedKeyVault.soso444vPremiumKey --[cite: 4]
 }
 
 local premiumKeys = {
@@ -92,8 +136,7 @@ local premiumKeys = {
     ["dohunpoop"] = savedKeyVault.dohunpoopPremiumKey,
     ["5ee566"] = savedKeyVault._5ee566PremiumKey,
     [savedKeyVault.timedProKey] = savedKeyVault.timedProKey,
-    -- 👉 soso444v 프리미엄 권한 적용 완료
-    ["soso444v"] = savedKeyVault.soso444vPremiumKey
+    ["soso444v"] = savedKeyVault.soso444vPremiumKey --[cite: 3]
 }
 
 _G.AXR_Authenticated = _G.AXR_Authenticated or false
@@ -201,7 +244,7 @@ titleFrame.BackgroundColor3 = Color3.fromRGB(24, 24, 28)
 titleFrame.TextColor3 = Color3.fromRGB(255, 255, 255)
 titleFrame.TextSize = 15
 titleFrame.Font = Enum.Font.GothamBold
-titleFrame.Text = "   AXR 단어 헬퍼"
+titleFrame.Text = "   AXR_단어맞히기"
 titleFrame.TextXAlignment = Enum.TextXAlignment.Left
 titleFrame.TextYAlignment = Enum.TextYAlignment.Top
 titleFrame.AutoButtonColor = false
@@ -394,14 +437,165 @@ local function updatePremiumUIVisibility(isVisible)
 end
 
 -- ==========================================
+-- [문의하기 UI 생성 함수]
+-- ==========================================
+local function createInquiryUI(settingsFrame)
+    settingsFrame.Visible = false
+
+    local inquiryFrame = Instance.new("Frame")
+    inquiryFrame.Size = UDim2.new(0, 360, 0, 310)
+    inquiryFrame.Position = UDim2.new(0.5, -180, 0.4, -155)
+    inquiryFrame.BackgroundColor3 = Color3.fromRGB(24, 24, 28)
+    inquiryFrame.BorderSizePixel = 0
+    inquiryFrame.Parent = screenGui
+
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 10)
+    corner.Parent = inquiryFrame
+
+    local accentLine = Instance.new("Frame")
+    accentLine.Size = UDim2.new(1, 0, 0, 3)
+    accentLine.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
+    accentLine.BorderSizePixel = 0
+    accentLine.Parent = inquiryFrame
+
+    local title = Instance.new("TextLabel")
+    title.Size = UDim2.new(1, 0, 0, 40)
+    title.BackgroundTransparency = 1
+    title.TextColor3 = Color3.fromRGB(255, 255, 255)
+    title.TextSize = 15
+    title.Font = Enum.Font.GothamBold
+    title.Text = "  개발자에게 문의하기"
+    title.TextXAlignment = Enum.TextXAlignment.Left
+    title.Parent = inquiryFrame
+
+    local noticeLbl = Instance.new("TextLabel")
+    noticeLbl.Size = UDim2.new(0, 330, 0, 30)
+    noticeLbl.Position = UDim2.new(0.5, -165, 0, 42)
+    noticeLbl.BackgroundTransparency = 1
+    noticeLbl.TextColor3 = Color3.fromRGB(255, 170, 0)
+    noticeLbl.TextSize = 11
+    noticeLbl.Font = Enum.Font.GothamMedium
+    noticeLbl.Text = "⚠️ 주의: 장난 및 도배성 문의는 개발자에게 실시간 알림이 가므로 자제해 주세요!"
+    noticeLbl.TextWrapped = true
+    noticeLbl.TextXAlignment = Enum.TextXAlignment.Left
+    noticeLbl.Parent = inquiryFrame
+
+    local contentBox = Instance.new("TextBox")
+    contentBox.Size = UDim2.new(0, 330, 0, 45)
+    contentBox.Position = UDim2.new(0.5, -165, 0, 78)
+    contentBox.BackgroundColor3 = Color3.fromRGB(16, 16, 20)
+    contentBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+    contentBox.PlaceholderColor3 = Color3.fromRGB(130, 130, 145)
+    contentBox.PlaceholderText = "개발자에게 전달할 메시지를 입력하세요..."
+    contentBox.TextSize = 12
+    contentBox.Font = Enum.Font.Gotham
+    contentBox.Text = ""
+    contentBox.ClearTextOnFocus = false
+    contentBox.Parent = inquiryFrame
+
+    local c1 = Instance.new("UICorner")
+    c1.CornerRadius = UDim.new(0, 6)
+    c1.Parent = contentBox
+
+    local discordBox = Instance.new("TextBox")
+    discordBox.Size = UDim2.new(0, 330, 0, 45)
+    discordBox.Position = UDim2.new(0.5, -165, 0, 130)
+    discordBox.BackgroundColor3 = Color3.fromRGB(16, 16, 20)
+    discordBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+    discordBox.PlaceholderColor3 = Color3.fromRGB(130, 130, 145)
+    discordBox.PlaceholderText = "예: OOOO#0 또는 본인 디스코드 닉네임"
+    discordBox.TextSize = 12
+    discordBox.Font = Enum.Font.Gotham
+    discordBox.Text = ""
+    discordBox.ClearTextOnFocus = false
+    discordBox.Parent = inquiryFrame
+
+    local c2 = Instance.new("UICorner")
+    c2.CornerRadius = UDim.new(0, 6)
+    c2.Parent = discordBox
+
+    local statusLbl = Instance.new("TextLabel")
+    statusLbl.Size = UDim2.new(1, 0, 0, 20)
+    statusLbl.Position = UDim2.new(0, 0, 0, 180)
+    statusLbl.BackgroundTransparency = 1
+    statusLbl.TextColor3 = Color3.fromRGB(200, 200, 200)
+    statusLbl.TextSize = 11
+    statusLbl.Font = Enum.Font.GothamMedium
+    statusLbl.Text = ""
+    statusLbl.Parent = inquiryFrame
+
+    local sendBtn = Instance.new("TextButton")
+    sendBtn.Size = UDim2.new(0, 330, 0, 38)
+    sendBtn.Position = UDim2.new(0.5, -165, 0, 205)
+    sendBtn.BackgroundColor3 = Color3.fromRGB(0, 170, 85)
+    sendBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    sendBtn.TextSize = 13
+    sendBtn.Font = Enum.Font.GothamBold
+    sendBtn.Text = "문의 내용 보내기"
+    sendBtn.Parent = inquiryFrame
+
+    local c3 = Instance.new("UICorner")
+    c3.CornerRadius = UDim.new(0, 6)
+    c3.Parent = sendBtn
+
+    local backBtn = Instance.new("TextButton")
+    backBtn.Size = UDim2.new(0, 330, 0, 32)
+    backBtn.Position = UDim2.new(0.5, -165, 0, 250)
+    backBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 70)
+    backBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    backBtn.TextSize = 12
+    backBtn.Font = Enum.Font.GothamBold
+    backBtn.Text = "돌아가기"
+    backBtn.Parent = inquiryFrame
+
+    local c4 = Instance.new("UICorner")
+    c4.CornerRadius = UDim.new(0, 6)
+    c4.Parent = backBtn
+
+    sendBtn.MouseButton1Click:Connect(function()
+        local inquiryText = contentBox.Text:gsub("^%s*(.-)%s*$", "%1")
+        local discordTag = discordBox.Text:gsub("^%s*(.-)%s*$", "%1")
+
+        if inquiryText == "" then
+            statusLbl.TextColor3 = Color3.fromRGB(255, 80, 80)
+            statusLbl.Text = "문의할 내용을 입력해주세요."
+            return
+        end
+        if discordTag == "" then
+            statusLbl.TextColor3 = Color3.fromRGB(255, 80, 80)
+            statusLbl.Text = "디스코드 표시 닉네임을 입력해주세요."
+            return
+        end
+
+        local payload = {
+            content = string.format("📩 **새로운 개발자 문의가 도착했습니다!**\n• 로블록스 닉네임: `%s`\n• 표시 닉네임: `%s`\n• 고유 숫자 ID: `%d`\n• 디스코드 표시 닉네임: `%s`\n• 문의 내용:\n> %s", 
+                localPlayer.Name, localPlayer.DisplayName, localPlayer.UserId, discordTag, inquiryText)
+        }
+
+        sendWebhook(inquiryWebhookUrl, payload)
+        statusLbl.TextColor3 = Color3.fromRGB(50, 255, 50)
+        statusLbl.Text = "문의가 성공적으로 전송되었습니다!"
+        task.wait(1.5)
+        inquiryFrame:Destroy()
+        settingsFrame.Visible = true
+    end)
+
+    backBtn.MouseButton1Click:Connect(function()
+        inquiryFrame:Destroy()
+        settingsFrame.Visible = true
+    end)
+end
+
+-- ==========================================
 -- [설정 창 생성 함수]
 -- ==========================================
 local function createSettingsUI()
     titleFrame.Visible = false
 
     local settingsFrame = Instance.new("Frame")
-    settingsFrame.Size = UDim2.new(0, 270, 0, 180)
-    settingsFrame.Position = UDim2.new(0.5, -135, 0.4, -90)
+    settingsFrame.Size = UDim2.new(0, 270, 0, 225)
+    settingsFrame.Position = UDim2.new(0.5, -135, 0.4, -112)
     settingsFrame.BackgroundColor3 = Color3.fromRGB(24, 24, 28)
     settingsFrame.BorderSizePixel = 0
     settingsFrame.Parent = screenGui
@@ -440,9 +634,23 @@ local function createSettingsUI()
     uiCornerReset.CornerRadius = UDim.new(0, 6)
     uiCornerReset.Parent = resetKeyBtn
 
+    local inquiryBtn = Instance.new("TextButton")
+    inquiryBtn.Size = UDim2.new(0, 230, 0, 34)
+    inquiryBtn.Position = UDim2.new(0.5, -115, 0, 88)
+    inquiryBtn.BackgroundColor3 = Color3.fromRGB(88, 101, 242)
+    inquiryBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    inquiryBtn.TextSize = 12
+    inquiryBtn.Font = Enum.Font.GothamBold
+    inquiryBtn.Text = "문의하기"
+    inquiryBtn.Parent = settingsFrame
+
+    local uiCornerInquiry = Instance.new("UICorner")
+    uiCornerInquiry.CornerRadius = UDim.new(0, 6)
+    uiCornerInquiry.Parent = inquiryBtn
+
     local destroyScriptBtn = Instance.new("TextButton")
     destroyScriptBtn.Size = UDim2.new(0, 230, 0, 34)
-    destroyScriptBtn.Position = UDim2.new(0.5, -115, 0, 88)
+    destroyScriptBtn.Position = UDim2.new(0.5, -115, 0, 128)
     destroyScriptBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 70)
     destroyScriptBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
     destroyScriptBtn.TextSize = 12
@@ -456,7 +664,7 @@ local function createSettingsUI()
 
     local closeSettingsBtn = Instance.new("TextButton")
     closeSettingsBtn.Size = UDim2.new(0, 230, 0, 32)
-    closeSettingsBtn.Position = UDim2.new(0.5, -115, 0, 134)
+    closeSettingsBtn.Position = UDim2.new(0.5, -115, 0, 174)
     closeSettingsBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 52)
     closeSettingsBtn.TextColor3 = Color3.fromRGB(200, 200, 200)
     closeSettingsBtn.TextSize = 12
@@ -475,6 +683,10 @@ local function createSettingsUI()
         updatePremiumUIVisibility(false)
         settingsFrame:Destroy()
         if createKeySystemUI then createKeySystemUI() end
+    end)
+
+    inquiryBtn.MouseButton1Click:Connect(function()
+        createInquiryUI(settingsFrame)
     end)
 
     destroyScriptBtn.MouseButton1Click:Connect(function()
@@ -649,7 +861,7 @@ pcall(function()
 end)
 
 -- ==========================================
--- [패치노트, 키 모음 정보 및 인증 시스템 UI]
+-- [패치노트 및 인증 시스템 UI]
 -- ==========================================
 local function createPatchNotesUI(keyFrame)
     local patchFrame = Instance.new("Frame")
@@ -690,11 +902,10 @@ local function createPatchNotesUI(keyFrame)
     contentBox.TextYAlignment = Enum.TextYAlignment.Top
     contentBox.TextWrapped = true
     contentBox.Text = [[
-[ AXR v2.0 최종 패치 내역 ]
-• 한 글자 정답 및 모든 언어 단어 원본 그대로 출력되도록 개선
-• 인증 통과 시 X 위에 왕관이 얹힌 AXR 로고 인트로 연출 추가
-• 번역 및 불필요한 자동 변환 로직 제거 완료
-• 이벤트 전용 시간제 프리미엄 패스 지원 및 만료 타이머 탑재
+[ AXR v2.1 패치 내역 ]
+• 허용되지 않은 사용자 실행 시 웹훅 경고 및 즉시 킥 처리 보안 강화
+• 사용자 키 목록 완벽 복원 및 최신 데이터 반영 완료
+• 설정 창 내 실시간 개발자 문의하기 UI 기능 탑재
 ]]
     contentBox.Parent = patchFrame
 
@@ -919,109 +1130,6 @@ local function createSpecialCodeUI(keyFrame)
 end
 
 -- ==========================================
--- [2단계 인증 UI]
--- ==========================================
-local function createSecondStepUI(isPremium, usedKey)
-    local secondFrame = Instance.new("Frame")
-    secondFrame.Size = UDim2.new(0, 320, 0, 255)
-    secondFrame.Position = UDim2.new(0.5, -160, 0.4, -127)
-    secondFrame.BackgroundColor3 = Color3.fromRGB(24, 24, 28)
-    secondFrame.BorderSizePixel = 0
-    secondFrame.Parent = screenGui
-
-    local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 10)
-    corner.Parent = secondFrame
-
-    local title = Instance.new("TextLabel")
-    title.Size = UDim2.new(1, 0, 0, 42)
-    title.BackgroundTransparency = 1
-    title.TextColor3 = Color3.fromRGB(255, 255, 255)
-    title.TextSize = 15
-    title.Font = Enum.Font.GothamBold
-    title.Text = "  AXR 2단계 본인 확인 인증"
-    title.TextXAlignment = Enum.TextXAlignment.Left
-    title.Parent = secondFrame
-
-    local usernameBox = Instance.new("TextBox")
-    usernameBox.Size = UDim2.new(0, 288, 0, 32)
-    usernameBox.Position = UDim2.new(0.5, -144, 0, 50)
-    usernameBox.BackgroundColor3 = Color3.fromRGB(16, 16, 20)
-    usernameBox.TextColor3 = Color3.fromRGB(255, 255, 255)
-    usernameBox.PlaceholderColor3 = Color3.fromRGB(130, 130, 145)
-    usernameBox.PlaceholderText = "실제 닉네임 (Username) 입력..."
-    usernameBox.TextSize = 12
-    usernameBox.Font = Enum.Font.Gotham
-    usernameBox.Parent = secondFrame
-
-    local corner1 = Instance.new("UICorner")
-    corner1.CornerRadius = UDim.new(0, 6)
-    corner1.Parent = usernameBox
-
-    local displayBox = Instance.new("TextBox")
-    displayBox.Size = UDim2.new(0, 288, 0, 32)
-    displayBox.Position = UDim2.new(0.5, -144, 0, 92)
-    displayBox.BackgroundColor3 = Color3.fromRGB(16, 16, 20)
-    displayBox.TextColor3 = Color3.fromRGB(255, 255, 255)
-    displayBox.PlaceholderColor3 = Color3.fromRGB(130, 130, 145)
-    displayBox.PlaceholderText = "표시 닉네임 (Display Name) 입력..."
-    displayBox.TextSize = 12
-    displayBox.Font = Enum.Font.Gotham
-    displayBox.Parent = secondFrame
-
-    local corner2 = Instance.new("UICorner")
-    corner2.CornerRadius = UDim.new(0, 6)
-    corner2.Parent = displayBox
-
-    local statusLbl = Instance.new("TextLabel")
-    statusLbl.Size = UDim2.new(1, 0, 0, 25)
-    statusLbl.Position = UDim2.new(0, 0, 0, 134)
-    statusLbl.BackgroundTransparency = 1
-    statusLbl.TextColor3 = Color3.fromRGB(200, 200, 200)
-    statusLbl.TextSize = 11
-    statusLbl.Font = Enum.Font.GothamMedium
-    statusLbl.Text = "본인의 계정 정보를 정확히 입력해주세요."
-    statusLbl.Parent = secondFrame
-
-    local confirmBtn = Instance.new("TextButton")
-    confirmBtn.Size = UDim2.new(0, 288, 0, 36)
-    confirmBtn.Position = UDim2.new(0.5, -144, 0, 172)
-    confirmBtn.BackgroundColor3 = Color3.fromRGB(0, 170, 85)
-    confirmBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    confirmBtn.TextSize = 13
-    confirmBtn.Font = Enum.Font.GothamBold
-    confirmBtn.Text = "최종 인증 완료"
-    confirmBtn.Parent = secondFrame
-
-    local cornerBtn = Instance.new("UICorner")
-    cornerBtn.CornerRadius = UDim.new(0, 6)
-    cornerBtn.Parent = confirmBtn
-
-    confirmBtn.MouseButton1Click:Connect(function()
-        local enteredUser = usernameBox.Text:gsub("^%s*(.-)%s*$", "%1")
-        local enteredDisplay = displayBox.Text:gsub("^%s*(.-)%s*$", "%1")
-
-        if enteredUser == localPlayer.Name and enteredDisplay == localPlayer.DisplayName then
-            if isPremium then
-                _G.AXR_PremiumAuthenticated = true
-                _G.AXR_ActiveKey = usedKey
-            end
-            _G.AXR_Authenticated = true
-            statusLbl.TextColor3 = Color3.fromRGB(50, 255, 50)
-            statusLbl.Text = "2단계 인증 성공! 환영합니다."
-            task.wait(0.8)
-            secondFrame:Destroy()
-            playAXRIntro()
-            titleFrame.Visible = true
-            updatePremiumUIVisibility(isPremium)
-        else
-            statusLbl.TextColor3 = Color3.fromRGB(255, 80, 80)
-            statusLbl.Text = "실제 닉네임 또는 표시 닉네임이 일치하지 않습니다."
-        end
-    end)
-end
-
--- ==========================================
 -- [메인 키 시스템 UI]
 -- ==========================================
 createKeySystemUI = function()
@@ -1178,7 +1286,7 @@ createKeySystemUI = function()
                 return
             end
             statusLabel.TextColor3 = Color3.fromRGB(50, 255, 50)
-            statusLabel.Text = "시간제 프리미엄 키 인증 성공! (2단계 생략)"
+            statusLabel.Text = "시간제 프리미엄 키 인증 성공!"
             task.wait(0.6)
             
             _G.AXR_Authenticated = true
@@ -1192,17 +1300,27 @@ createKeySystemUI = function()
 
         elseif premiumKeys[playerName] and premiumKeys[playerName] == enteredKey then
             statusLabel.TextColor3 = Color3.fromRGB(50, 255, 50)
-            statusLabel.Text = "프리미엄 키 인증 성공!"
+            statusLabel.Text = "프리미엄 키 인증 성공! 환영합니다."
             task.wait(0.6)
             keyFrame:Destroy()
-            createSecondStepUI(true, enteredKey)
+            playAXRIntro()
+            _G.AXR_Authenticated = true
+            _G.AXR_PremiumAuthenticated = true
+            _G.AXR_ActiveKey = enteredKey
+            titleFrame.Visible = true
+            updatePremiumUIVisibility(true)
 
         elseif userKeys[playerName] and userKeys[playerName] == enteredKey then
             statusLabel.TextColor3 = Color3.fromRGB(50, 255, 50)
-            statusLabel.Text = "일반 키 인증 성공!"
+            statusLabel.Text = "일반 키 인증 성공! 환영합니다."
             task.wait(0.6)
             keyFrame:Destroy()
-            createSecondStepUI(false, nil)
+            playAXRIntro()
+            _G.AXR_Authenticated = true
+            _G.AXR_PremiumAuthenticated = false
+            _G.AXR_ActiveKey = enteredKey
+            titleFrame.Visible = true
+            updatePremiumUIVisibility(false)
 
         else
             statusLabel.TextColor3 = Color3.fromRGB(255, 80, 80)
